@@ -8,11 +8,11 @@ build/
 # Virtual Environment
 venv/
 
-# Jupyter Notebooks
-.ipynb_checkpoints/
-
 # Logs
 *.log
+
+# Jupyter
+.ipynb_checkpoints/
 
 # VSCode
 .vscode/
