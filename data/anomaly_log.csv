@@ -1,0 +1,33 @@
+timestamp,region,product_id,orders,inventory,revenue,explanation
+2025-07-25T01:46:07,East,P106,20,28,1115.59,"🤖 Mocked Explanation:
+1. Regional surge in demand in East.
+2. Product P106 might be trending or discounted.
+3. A bulk order or pricing issue may have caused the spike in revenue (1115.59)."
+2025-07-25T01:46:07,North,P100,20,30,1125.87,"🤖 Mocked Explanation:
+1. Regional surge in demand in North.
+2. Product P100 might be trending or discounted.
+3. A bulk order or pricing issue may have caused the spike in revenue (1125.87)."
+2025-07-25T01:56:13,East,P106,20,28,1115.59,"🤖 Mocked Explanation:
+1. Regional surge in demand in East.
+2. Product P106 might be trending or discounted.
+3. A bulk order or pricing issue may have caused the spike in revenue (1115.59)."
+2025-07-25T01:56:13,North,P100,20,30,1125.87,"🤖 Mocked Explanation:
+1. Regional surge in demand in North.
+2. Product P100 might be trending or discounted.
+3. A bulk order or pricing issue may have caused the spike in revenue (1125.87)."
+2025-07-25T02:00:59,East,P106,20,28,1115.59,"🤖 Mocked Explanation:
+1. Regional surge in demand in East.
+2. Product P106 might be trending or discounted.
+3. A bulk order or pricing issue may have caused the spike in revenue (1115.59)."
+2025-07-25T02:00:59,North,P100,20,30,1125.87,"🤖 Mocked Explanation:
+1. Regional surge in demand in North.
+2. Product P100 might be trending or discounted.
+3. A bulk order or pricing issue may have caused the spike in revenue (1125.87)."
+2025-07-25T02:03:34,East,P106,20,28,1115.59,"🤖 Mocked Explanation:
+1. Regional surge in demand in East.
+2. Product P106 might be trending or discounted.
+3. A bulk order or pricing issue may have caused the spike in revenue (1115.59)."
+2025-07-25T02:03:34,North,P100,20,30,1125.87,"🤖 Mocked Explanation:
+1. Regional surge in demand in North.
+2. Product P100 might be trending or discounted.
+3. A bulk order or pricing issue may have caused the spike in revenue (1125.87)."

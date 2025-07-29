@@ -16,3 +16,9 @@ venv/
 
 # VSCode
 .vscode/
+
+# Env variables (Security!)
+.env
+
+# macOS system files (just in case)
+.DS_Store
