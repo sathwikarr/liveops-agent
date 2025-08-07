@@ -1,6 +1,7 @@
 from datetime import datetime
 import pandas as pd
 import os
+import requests
 
 ACTION_LOG = "data/action_log.csv"
 
@@ -20,6 +21,8 @@ def simulate_action(region, product_id, orders, inventory, revenue):
     else:
         action = "ℹ️ Log only – no action needed"
 
+    send_slack_alert(f"🚨 LiveOps Alert: {action} for {product_id} in {region} (rev={revenue})")
+
     log_action(region, product_id, action)
     return action
 
@@ -34,3 +37,15 @@ def log_action(region, product_id, action, outcome="pending"):
 
     df = pd.DataFrame([data])
     df.to_csv(ACTION_LOG, mode='a', index=False, header=not os.path.exists(ACTION_LOG))
+
+SLACK_WEBHOOK = os.getenv("SLACK_WEBHOOK")
+
+def send_slack_alert(message):
+    if not SLACK_WEBHOOK:
+        print("⚠️ Slack webhook not configured.")
+        return
+
+    try:
+        requests.post(SLACK_WEBHOOK, json={"text": message})
+    except Exception as e:
+        print("Slack error:", e)

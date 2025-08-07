@@ -22,3 +22,4 @@ venv/
 
 # macOS system files (just in case)
 .DS_Store
+user_data/

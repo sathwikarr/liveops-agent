@@ -14,7 +14,7 @@ from agent.memory import read_anomaly_log
 # ------------------- Auth Check --------
 if "username" not in st.session_state:
     st.warning("⛔ Please log in to continue.")
-    st.switch_page("ui/login.py")  # Redirect to login
+    st.switch_page("Login.py")  # Redirect to login
 
 username = st.session_state["username"]
 st.sidebar.success(f"Logged in as: {username}")
@@ -41,7 +41,7 @@ if not os.path.exists(user_csv_path):
 
 
 # ----------------- Page Setup -----------------
-st.set_page_config(page_title="LiveOps Agent Dashboard", layout="wide")
+st.set_page_config(page_title="LiveOps Dashboard", layout="wide")
 st.title("📊 LiveOps Agent Dashboard")
 st.caption("Real-time anomaly detection + explanations")
 

@@ -1,14 +1,8 @@
 from agent.detect import read_latest_data, zscore_anomaly_detection
-# from agent.explain import explain_anomaly  # Uncomment when using real API
+from agent.explain import explain_anomaly  # Uncomment when using real API
 
 import datetime
 import os
-
-def mock_explain(region, product_id, orders, inventory, revenue):
-    return f"""🤖 Mocked Explanation:
-1. Regional surge in demand in {region}.
-2. Product {product_id} might be trending or discounted.
-3. A bulk order or pricing issue may have caused the spike in revenue ({revenue})."""
 
 def run_liveops_agent():
     print("🧠 LiveOps Agent Running...\n")
@@ -29,7 +23,7 @@ def run_liveops_agent():
         inventory = df[(df["product_id"] == product_id) & (df["region"] == region)]["inventory"].iloc[-1]
 
         # explanation = explain_anomaly(region, product_id, orders, inventory, revenue)
-        explanation = mock_explain(region, product_id, orders, inventory, revenue)
+        explanation = explain_anomaly(region, product_id, orders, inventory, revenue)
 
         print("⚠️ Anomaly Detected:")
         print(f"Product: {product_id}, Region: {region}, Revenue: {revenue}")
