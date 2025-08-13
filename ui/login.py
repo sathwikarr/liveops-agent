@@ -6,7 +6,7 @@ def login_page():
     if "username" in st.session_state:
         st.success(f"Already logged in as {st.session_state['username']}")
         if st.button("Go to Dashboard"):
-            st.switch_page("LiveOps Dashboard")
+            st.switch_page("dashboard")
         return
 
     username = st.text_input("Username", key="login_username")
@@ -14,6 +14,6 @@ def login_page():
         if username:
             st.session_state["username"] = username
             st.success(f"Welcome, {username}!")
-            st.switch_page("LiveOps Dashboard")
+            st.switch_page("dashboard")
         else:
             st.error("Please enter a username")

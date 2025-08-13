@@ -1,3 +1,4 @@
+
 import sys
 import os
 import pandas as pd
@@ -14,7 +15,7 @@ from agent.memory import read_anomaly_log
 # ------------------- Auth Check --------
 if "username" not in st.session_state:
     st.warning("⛔ Please log in to continue.")
-    st.switch_page("Login.py")  # Redirect to login
+    st.switch_page("login.py")  # Redirect to login
 
 username = st.session_state["username"]
 st.sidebar.success(f"Logged in as: {username}")
@@ -135,4 +136,3 @@ if os.path.exists(action_log_path):
         actions_by_day = outcome_df.groupby(["date", "outcome"]).size().unstack(fill_value=0)
 
         st.bar_chart(actions_by_day)
-
