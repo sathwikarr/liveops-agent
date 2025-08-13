@@ -1,4 +1,4 @@
 # app.py
-from ui.login import login_page
+from pages.login import login_page
 
 login_page()
