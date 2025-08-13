@@ -1,5 +1,7 @@
 import streamlit as st
 
+st.set_page_config(page_title="Login")
+
 def login_page():
     st.title("🔐 LiveOps Agent - Login")
 

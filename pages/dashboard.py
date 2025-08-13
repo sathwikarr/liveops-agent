@@ -5,6 +5,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 
+# ----------------- Page Setup -----------------
+st.set_page_config(page_title="Dashboard", layout="wide")
+st.title("📊 LiveOps Agent Dashboard")
+st.caption("Real-time anomaly detection + explanations")
+
+
 # Add root directory to path for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -15,7 +21,7 @@ from agent.memory import read_anomaly_log
 # ------------------- Auth Check --------
 if "username" not in st.session_state:
     st.warning("⛔ Please log in to continue.")
-    st.switch_page("login.py")  # Redirect to login
+    st.switch_page("login")  # Redirect to login
 
 username = st.session_state["username"]
 st.sidebar.success(f"Logged in as: {username}")
@@ -41,10 +47,6 @@ if not os.path.exists(user_csv_path):
 
 
 
-# ----------------- Page Setup -----------------
-st.set_page_config(page_title="Dashboard", layout="wide")
-st.title("📊 LiveOps Agent Dashboard")
-st.caption("Real-time anomaly detection + explanations")
 
 # ----------------- Live Data -----------------
 user_csv_path = f"user_data/{username}.csv"
