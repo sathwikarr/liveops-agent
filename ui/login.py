@@ -9,7 +9,7 @@ def login_page():
     if "username" in st.session_state:
         st.success(f"Already logged in as {st.session_state['username']}")
         if st.button("Go to Dashboard"):
-            st.switch_page("Dashboard")
+            st.switch_page("pages/dashboard.py")  # Correct path to dashboard.py
         return
 
     # Login form
@@ -18,6 +18,9 @@ def login_page():
         if username:
             st.session_state["username"] = username
             st.success(f"Welcome, {username}!")
-            st.switch_page("Dashboard")  # no path needed, only page title
+            st.switch_page("pages/dashboard.py")  # Correct path to dashboard.py
         else:
             st.error("Please enter a username")
+
+# Call the login_page function
+login_page()

@@ -7,7 +7,7 @@ import streamlit as st
 
 # ----------------- Page Setup -----------------
 st.set_page_config(page_title="Dashboard")
-st.title("Dashboard")
+st.title("📊 LiveOps Agent - Dashboard")
 st.caption("Real-time anomaly detection + explanations")
 
 
@@ -21,7 +21,7 @@ from agent.memory import read_anomaly_log
 # ------------------- Auth Check --------
 if "username" not in st.session_state:
     st.warning("⛔ Please log in to continue.")
-    st.switch_page("login")  # Redirect to login
+    st.switch_page("ui/login")  # Redirect to login
 
 username = st.session_state["username"]
 st.sidebar.success(f"Logged in as: {username}")
