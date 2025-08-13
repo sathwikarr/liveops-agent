@@ -42,7 +42,7 @@ if not os.path.exists(user_csv_path):
 
 
 # ----------------- Page Setup -----------------
-st.set_page_config(page_title="LiveOps Dashboard", layout="wide")
+st.set_page_config(page_title="Dashboard", layout="wide")
 st.title("📊 LiveOps Agent Dashboard")
 st.caption("Real-time anomaly detection + explanations")
 
