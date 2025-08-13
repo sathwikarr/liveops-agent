@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import streamlit as st
 
 # ----------------- Page Setup -----------------
-st.set_page_config(page_title="Dashboard", layout="wide")
-st.title("📊 LiveOps Agent Dashboard")
+st.set_page_config(page_title="Dashboard")
+st.title("Dashboard")
 st.caption("Real-time anomaly detection + explanations")
 
 
