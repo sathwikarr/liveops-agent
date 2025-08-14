@@ -138,3 +138,5 @@ if os.path.exists(action_log_path):
         actions_by_day = outcome_df.groupby(["date", "outcome"]).size().unstack(fill_value=0)
 
         st.bar_chart(actions_by_day)
+
+

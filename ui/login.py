@@ -22,5 +22,4 @@ def login_page():
         else:
             st.error("Please enter a username")
 
-# Call the login_page function
-login_page()
+
