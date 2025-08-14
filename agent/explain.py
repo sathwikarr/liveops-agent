@@ -1,11 +1,10 @@
 import os
-import openai
 from dotenv import load_dotenv
+from openai import OpenAI
 
 # Load .env values
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
-openai.api_base = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"))
 
 def explain_anomaly(region, product_id, orders, inventory, revenue):
     prompt = f"""
@@ -20,10 +19,9 @@ An anomaly was detected:
 
 Give 3 possible reasons this anomaly occurred. Be concise and use bullet points.
 """
-
     try:
-        response = openai.ChatCompletion.create(
-            model="mistralai/Mixtral-8x7B-Instruct-v0.1",  # Or try llama-3
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",  # Change to a model your API supports
             messages=[{"role": "user", "content": prompt}],
             temperature=0.5
         )
