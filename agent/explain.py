@@ -1,10 +1,11 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
+import streamlit as st
 
 # Load .env values
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"))
+client = OpenAI(api_key=st.secrets("OPENAI_API_KEY"), base_url=st.secrets.get("OPENAI_BASE_URL", "https://api.openai.com/v1"))
 
 def explain_anomaly(region, product_id, orders, inventory, revenue):
     prompt = f"""
