@@ -23,3 +23,4 @@ def login_page():
             st.error("Please enter a username")
 
 
+login_page()
