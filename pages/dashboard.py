@@ -140,3 +140,20 @@ if os.path.exists(action_log_path):
         st.bar_chart(actions_by_day)
 
 
+from agent.forecast import forecast_revenue
+
+st.subheader("🔮 Revenue Forecast")
+
+user_csv_path = f"user_data/{username}.csv"  # From earlier login setup
+
+forecast_df = forecast_revenue(user_csv_path, periods=10)
+
+if not forecast_df.empty:
+    st.line_chart(forecast_df.set_index('ds')[['yhat', 'yhat_lower', 'yhat_upper']])
+
+    anomalies_forecast = forecast_df[forecast_df['anomaly']]
+    if not anomalies_forecast.empty:
+        st.warning(f"⚠️ Potential future anomalies: {len(anomalies_forecast)} predicted.")
+        st.dataframe(anomalies_forecast)
+else:
+    st.info("No forecast data available yet.")
