@@ -1,24 +1,32 @@
+# agent/memory.py
+from pathlib import Path
 import pandas as pd
-import os
 from datetime import datetime
 
-LOG_FILE = "data/anomaly_log.csv"
+# repo root -> <repo>/data/anomaly_log.csv
+BASE_DIR = Path(__file__).resolve().parents[1]
+LOG_FILE = BASE_DIR / "data" / "anomaly_log.csv"
+
+def get_log_path() -> str:
+    return str(LOG_FILE)
 
 def save_anomaly_log(region, product_id, orders, inventory, revenue, explanation):
-    data = {
+    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    row = {
         "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
         "region": region,
         "product_id": product_id,
         "orders": orders,
         "inventory": inventory,
         "revenue": revenue,
-        "explanation": explanation
+        "explanation": explanation,
     }
-    df = pd.DataFrame([data])
-    df.to_csv(LOG_FILE, mode='a', index=False, header=not os.path.exists(LOG_FILE))
+    df = pd.DataFrame([row])
+    header = not LOG_FILE.exists()
+    df.to_csv(LOG_FILE, mode="a", index=False, header=header)
 
-def read_anomaly_log(n=20):
-    if not os.path.exists(LOG_FILE):
-        return pd.DataFrame()
+def read_anomaly_log(n: int = 200) -> pd.DataFrame:
+    if not LOG_FILE.exists():
+        return pd.DataFrame(columns=["timestamp","region","product_id","orders","inventory","revenue","explanation"])
     df = pd.read_csv(LOG_FILE)
     return df.tail(n)

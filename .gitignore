@@ -1,25 +1,18 @@
 # Python
 __pycache__/
-*.py[cod]
-*.egg-info/
-dist/
-build/
-
-# Virtual Environment
-venv/
-
-# Logs
-*.log
-
-# Jupyter
-.ipynb_checkpoints/
-
-# VSCode
-.vscode/
-
-# Env variables (Security!)
+*.pyc
+*.pyo
+*.pyd
 .env
+*.sqlite3
 
-# macOS system files (just in case)
-.DS_Store
+# Streamlit
+.streamlit/secrets.toml
+
+# Data
+data/anomaly_log.csv
+data/action_log.csv
 user_data/
+
+# OS
+.DS_Store
