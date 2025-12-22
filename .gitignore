@@ -16,3 +16,4 @@ user_data/
 
 # OS
 .DS_Store
+venv/
