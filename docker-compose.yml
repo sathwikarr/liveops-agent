@@ -1,0 +1,36 @@
+# Two services off the same image:
+#   - dashboard: the Streamlit UI on :8501
+#   - auto:     the headless agent loop (auto_agent.py)
+#
+# Both share the same SQLite file under ./data (WAL mode handles concurrent reads).
+#
+# Usage:
+#   docker compose up --build           # both services
+#   docker compose up dashboard         # UI only
+#   docker compose up auto              # background loop only
+#   docker compose down
+
+services:
+  dashboard:
+    build: .
+    image: liveops-agent:latest
+    container_name: liveops-dashboard
+    env_file: .env
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+      - ./user_data:/app/user_data
+    restart: unless-stopped
+
+  auto:
+    image: liveops-agent:latest
+    container_name: liveops-auto
+    depends_on:
+      - dashboard
+    env_file: .env
+    command: ["python", "auto_agent.py"]
+    volumes:
+      - ./data:/app/data
+      - ./user_data:/app/user_data
+    restart: unless-stopped

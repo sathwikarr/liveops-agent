@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  macOS launchd job for the LiveOps auto-agent loop.
+
+  Install:
+      cp deploy/com.liveops.agent.plist ~/Library/LaunchAgents/
+      # Edit the two REPLACE_ME paths below to match your machine, then:
+      launchctl load -w ~/Library/LaunchAgents/com.liveops.agent.plist
+
+  Tail logs:
+      tail -f /tmp/liveops-agent.out /tmp/liveops-agent.err
+
+  Stop / unload:
+      launchctl unload -w ~/Library/LaunchAgents/com.liveops.agent.plist
+
+  Notes:
+    - WorkingDirectory must be the repo root so .env and user_data/ resolve.
+    - ProgramArguments[0] must be the python inside your venv (or any python
+      with the project deps installed).
+    - KeepAlive=true restarts the loop if it crashes; auto_agent.py also has
+      its own internal loop so this is belt + suspenders.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.liveops.agent</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>REPLACE_ME/liveops-agent/venv/bin/python</string>
+        <string>REPLACE_ME/liveops-agent/auto_agent.py</string>
+        <string>--interval</string>
+        <string>30</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>REPLACE_ME/liveops-agent</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/liveops-agent.out</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/liveops-agent.err</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>

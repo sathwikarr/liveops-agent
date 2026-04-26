@@ -1,0 +1,53 @@
+# Don't ship source-control or local state into the image.
+.git
+.github
+.gitignore
+.vscode
+.DS_Store
+
+# Local secrets — load via --env-file at runtime.
+.env
+.env.*
+!.env.example
+streamlit/secrets.toml
+.streamlit/secrets.toml
+
+# Local databases + per-user uploads.
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+data/anomaly_log.csv
+data/action_log.csv
+data/.csv_imported
+user_data/
+
+# Python build/cache.
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+build/
+dist/
+*.egg-info/
+
+# Local virtualenvs.
+venv/
+.venv/
+env/
+
+# Docs/heavy assets that aren't needed at runtime.
+architecture.png
+*.md
+!README.md
+
+# Tests aren't needed in the runtime image.
+tests/
+pytest.ini
+
+# Tooling.
+docker-compose.override.yml

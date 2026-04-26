@@ -1,5 +1,7 @@
 # LiveOps Agent
 
+[![tests](https://github.com/sathwikarr/liveops-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/sathwikarr/liveops-agent/actions/workflows/tests.yml)
+
 Real-time AI co-pilot for operations teams. Watches a revenue/orders/inventory
 stream, surfaces anomalies, asks Gemini for a structured root-cause analysis,
 picks the best mitigating action via a Thompson-sampling bandit, sends
@@ -12,10 +14,10 @@ segment with Prophet — all in a Streamlit dashboard backed by SQLite.
 
 | Layer            | What it does                                                                   |
 |------------------|--------------------------------------------------------------------------------|
-| Detection        | Per-(region, product) z-score on revenue, orders, and inventory + global pass |
+| Detection        | Per-(region, product) z-score + IsolationForest (auto) on revenue, orders, inventory |
 | Explanation      | Gemini 2.5 Flash returning structured JSON: cause, severity, action, bullets  |
 | Decision         | Thompson-sampling bandit over candidate actions, learns from logged outcomes  |
-| Notifications    | Unified Slack webhook + SMTP email, severity-gated via env vars                |
+| Notifications    | Unified Slack webhook + SMTP email, severity-gated, deduped on a sliding cooldown |
 | Memory           | SQLite (WAL) — `users`, `anomalies`, `actions` — with one-time CSV migration  |
 | Forecasting      | Prophet per-segment + adaptive resample freq + walk-forward CV (MAPE / SMAPE / RMSE) |
 | Auth             | bcrypt signup + login, scoped per-user data                                     |
@@ -92,6 +94,32 @@ See `.env.example` for the full list. The important ones:
 
 If `GEMINI_API_KEY` is unset, `explain.py` falls back to a deterministic stub
 so the rest of the pipeline still works in tests / CI.
+
+---
+
+## Tests
+
+53 pytest tests cover auth, db, dedupe, detect (z-score + IsolationForest),
+forecast, bandit, and notify. CI runs them on Python 3.11 + 3.12 — see
+`.github/workflows/tests.yml`.
+
+```bash
+pip install pytest
+SLACK_WEBHOOK="" SMTP_HOST="" GEMINI_API_KEY="" pytest -v
+```
+
+---
+
+## Deployment
+
+Three options — see `deploy/README.md`:
+
+- **Docker Compose** (recommended) — `docker compose up --build` runs the
+  dashboard + auto-agent loop, both sharing a SQLite volume.
+- **Single Docker container** — `docker build -t liveops-agent .` then run
+  either `streamlit run app.py` or `python auto_agent.py`.
+- **macOS launchd** — `deploy/com.liveops.agent.plist` for the background loop;
+  start the dashboard separately when you want to look at it.
 
 ---
 
