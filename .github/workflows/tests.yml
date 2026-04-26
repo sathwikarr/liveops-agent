@@ -1,0 +1,40 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Trim heavy / platform-specific deps that aren't needed for unit tests.
+          # Prophet is optional in tests (covered by skipif), but install if it builds quickly.
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run pytest
+        env:
+          # Force tests to use ephemeral DB & disabled channels regardless of host env.
+          SLACK_WEBHOOK: ""
+          SMTP_HOST: ""
+          GEMINI_API_KEY: ""
+        run: pytest -v
