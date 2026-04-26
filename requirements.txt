@@ -74,5 +74,5 @@ tzdata==2025.2
 urllib3==2.5.0
 yarl==1.20.1
 pymongo
-google-generativeai
+google-genai>=0.3.0
 bcrypt>=4.0.0
