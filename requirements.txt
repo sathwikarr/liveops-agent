@@ -75,3 +75,4 @@ urllib3==2.5.0
 yarl==1.20.1
 pymongo
 google-generativeai
+bcrypt>=4.0.0

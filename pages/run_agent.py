@@ -1,8 +1,8 @@
 """LiveOps agent runner.
 
 Imported by `pages/dashboard.py` so the "▶️ Run Agent Once" button can fire
-the full detect → explain → log → act pipeline against the logged-in user's
-uploaded CSV.
+the full detect → explain → log → act pipeline against a user's CSV. Also
+imported by `auto_agent.py` for the standalone autonomous loop.
 
 Lives in `pages/` so Streamlit's multipage discovery picks it up alongside
 the dashboard, and so the dashboard's existing
@@ -13,86 +13,135 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from typing import Callable, Optional
 
-import streamlit as st
-
-# Make the repo root importable when Streamlit auto-runs this as a page
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.append(str(REPO_ROOT))
 
-from agent.detect import read_latest_data, zscore_anomaly_detection
+from agent.action import simulate_action
+from agent.detect import detect_anomalies, read_latest_data
 from agent.explain import explain_anomaly
 from agent.memory import save_anomaly_log
-from agent.action import simulate_action
 
 REQUIRED_COLS = {"region", "product_id", "orders", "inventory", "revenue"}
 
 
-def run_liveops_agent(username: str) -> None:
-    """Run one pass of the LiveOps pipeline for `username`.
+def _user_csv_path(username: str) -> Path:
+    return REPO_ROOT / "user_data" / f"{username}.csv"
 
-    - Reads the user's uploaded CSV at `user_data/{username}.csv`
-    - Runs z-score anomaly detection on revenue
-    - For each anomaly: asks Gemini for an explanation, persists the anomaly,
-      and triggers the rule-based action layer (which also fires a Slack alert
-      and writes to `data/action_log.csv`).
+
+def run_pipeline(
+    username: str,
+    *,
+    threshold: float = 1.5,
+    top_k: int = 50,
+    log: Callable[[str], None] = print,
+    on_anomaly: Optional[Callable[[dict, str, str], None]] = None,
+) -> int:
+    """Run one pass of the LiveOps pipeline. Returns number of anomalies acted on.
+
+    UI-agnostic: callers (Streamlit page, auto_agent.py CLI) pass `log` and
+    `on_anomaly` callbacks. `on_anomaly(row_dict, explanation, action)` runs
+    after each anomaly is processed.
     """
-    st.write("🧠 LiveOps Agent Running...")
+    csv_path = _user_csv_path(username)
+    if not csv_path.exists():
+        log(f"⚠️ No CSV for user {username!r} at {csv_path}")
+        return 0
 
-    user_csv_path = REPO_ROOT / "user_data" / f"{username}.csv"
-    if not user_csv_path.exists():
-        st.warning("⚠️ No user CSV found. Please upload a file.")
-        return
-
-    df = read_latest_data(str(user_csv_path), n=500)
+    df = read_latest_data(str(csv_path), n=2000)
     if df is None or df.empty:
-        st.info("ℹ️ No rows to analyze yet.")
-        return
+        log("ℹ️ No rows to analyze yet.")
+        return 0
 
     missing = REQUIRED_COLS - set(df.columns)
     if missing:
-        st.error(f"CSV is missing required columns: {', '.join(sorted(missing))}")
-        return
+        log(f"❌ CSV is missing required columns: {', '.join(sorted(missing))}")
+        return 0
 
-    anomalies = zscore_anomaly_detection(df, "revenue", threshold=1.5)
+    anomalies = detect_anomalies(df, threshold=threshold).head(top_k)
     if anomalies.empty:
-        st.success("✅ No anomalies found.")
-        return
+        log("✅ No anomalies found.")
+        return 0
 
-    st.subheader("⚠️ Detected Revenue Anomalies")
+    count = 0
     for _, row in anomalies.iterrows():
         region = row["region"]
         product_id = row["product_id"]
+        metric = row["metric"]
+        z = float(row["z_score"])
         revenue = float(row["revenue"])
-
-        latest = df[(df["product_id"] == product_id) & (df["region"] == region)].tail(1)
-        if latest.empty:
-            orders = int(row.get("orders", 0)) if "orders" in row else 0
-            inventory = int(row.get("inventory", 0)) if "inventory" in row else 0
-        else:
-            orders = int(latest["orders"].iloc[0])
-            inventory = int(latest["inventory"].iloc[0])
+        orders = int(row["orders"])
+        inventory = int(row["inventory"])
 
         explanation = explain_anomaly(region, product_id, orders, inventory, revenue)
 
-        with st.expander(f"🚨 {product_id} in {region} — Revenue: {revenue:.2f}", expanded=False):
-            st.markdown(explanation)
-
         try:
-            save_anomaly_log(region, product_id, orders, inventory, revenue, explanation)
+            save_anomaly_log(
+                region, product_id, orders, inventory, revenue, explanation,
+                username=username, metric=metric, z_score=z,
+            )
         except Exception as e:
-            st.warning(f"⚠️ Could not save anomaly: {e}")
+            log(f"⚠️ Could not save anomaly: {e}")
 
+        action = "ℹ️ Log only – no action needed"
         try:
             action = simulate_action(username, region, product_id, orders, inventory, revenue)
-            st.write("📦 Action Taken:", action)
         except Exception as e:
-            st.warning(f"⚠️ Action/logging failed: {e}")
+            log(f"⚠️ Action layer failed: {e}")
+
+        if on_anomaly:
+            on_anomaly(dict(row), explanation, action)
+
+        count += 1
+
+    log(f"📦 Processed {count} anomalies for {username}.")
+    return count
 
 
-# When Streamlit auto-loads this as a page, render a stub instead of crashing
-if __name__ == "__main__" or "streamlit" in os.path.basename(sys.argv[0] if sys.argv else ""):
+# --------------------------------------------------------------------------- #
+# Streamlit page rendering
+# --------------------------------------------------------------------------- #
+
+def run_liveops_agent(username: str) -> None:
+    """Streamlit-flavored wrapper used by the dashboard's 'Run Agent Once' button."""
+    import streamlit as st
+
+    st.write("🧠 LiveOps Agent Running…")
+
+    msgs: list[str] = []
+
+    def _log(m: str) -> None:
+        msgs.append(m)
+
+    def _on_anomaly(row: dict, explanation: str, action: str) -> None:
+        title = (
+            f"🚨 {row['product_id']} in {row['region']} "
+            f"— {row['metric']}={row['value']:.2f} (z={row['z_score']:+.2f}, {row['scope']})"
+        )
+        with st.expander(title, expanded=False):
+            st.markdown(explanation)
+            st.write("📦 Action:", action)
+
+    n = run_pipeline(username, log=_log, on_anomaly=_on_anomaly)
+    for m in msgs:
+        st.write(m)
+    if n == 0 and not any("anomalies" in m for m in msgs):
+        st.success("✅ Done — no anomalies found.")
+
+
+# Render a stub when Streamlit auto-loads this as a page
+def _is_streamlit_runtime() -> bool:
+    try:
+        import streamlit.runtime.scriptrunner as sr
+        return sr.get_script_run_ctx() is not None
+    except Exception:
+        return False
+
+
+if _is_streamlit_runtime():
+    import streamlit as st
     st.set_page_config(page_title="Run Agent")
     st.title("▶️ Run LiveOps Agent")
     if "username" not in st.session_state:
