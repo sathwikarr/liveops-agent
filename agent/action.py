@@ -3,24 +3,35 @@ import pandas as pd
 import os
 import requests
 
-ACTION_LOG = "data/action_log.csv"
+from pathlib import Path
+
+# Resolve relative to repo root so it works regardless of cwd
+BASE_DIR = Path(__file__).resolve().parents[1]
+ACTION_LOG = str(BASE_DIR / "data" / "action_log.csv")
+
 
 def get_action_success_rate():
     if os.path.exists(ACTION_LOG):
         df = pd.read_csv(ACTION_LOG)
-        success_df = df[df['outcome'] == 'success']
+        if "outcome" not in df.columns or "action" not in df.columns:
+            return pd.Series(dtype=float)
+        success_df = df[df["outcome"] == "success"]
         if not success_df.empty:
-            action_counts = success_df['action'].value_counts()
+            action_counts = success_df["action"].value_counts()
             total_successes = len(success_df)
-            return action_counts / total_successes if total_successes > 0 else pd.Series()
-    return pd.Series()
+            return action_counts / total_successes if total_successes > 0 else pd.Series(dtype=float)
+    return pd.Series(dtype=float)
 
-def simulate_action(region, product_id, orders, inventory, revenue):
+
+def simulate_action(username, region, product_id, orders, inventory, revenue):
     """
     Rule-based decision simulation with reinforcement learning based on past success rates.
+
+    `username` is threaded through to the Slack alert and the action log so we
+    know whose data triggered the action.
     """
     success_rates = get_action_success_rate()
-    
+
     action = None
     if revenue > 1000 and inventory < 20:
         action = "🔁 Suggest rerouting inventory from other regions"
@@ -35,29 +46,34 @@ def simulate_action(region, product_id, orders, inventory, revenue):
     else:
         action = "ℹ️ Log only – no action needed"
 
-    send_slack_alert(f"🚨 LiveOps Alert: {action} for {product_id} in {region} (rev={revenue})")
-    log_action(region, product_id, action)
+    send_slack_alert(
+        f"🚨 LiveOps Alert (user={username}): {action} for {product_id} in {region} (rev={revenue})"
+    )
+    log_action(region, product_id, action, username=username)
     return action
 
-def log_action(region, product_id, action, outcome="pending"):
+
+def log_action(region, product_id, action, outcome="pending", username=None):
+    Path(ACTION_LOG).parent.mkdir(parents=True, exist_ok=True)
     data = {
         "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+        "username": username or "",
         "region": region,
         "product_id": product_id,
         "action": action,
-        "outcome": outcome
+        "outcome": outcome,
     }
     df = pd.DataFrame([data])
-    df.to_csv(ACTION_LOG, mode='a', index=False, header=not os.path.exists(ACTION_LOG))
+    df.to_csv(ACTION_LOG, mode="a", index=False, header=not os.path.exists(ACTION_LOG))
 
-SLACK_WEBHOOK = os.getenv("SLACK_WEBHOOK")
 
 def send_slack_alert(message):
-    if not SLACK_WEBHOOK:
+    """Read SLACK_WEBHOOK at call time so .env loaded later still takes effect."""
+    webhook = os.getenv("SLACK_WEBHOOK")
+    if not webhook:
         print("⚠️ Slack webhook not configured.")
         return
-
     try:
-        requests.post(SLACK_WEBHOOK, json={"text": message})
+        requests.post(webhook, json={"text": message}, timeout=5)
     except Exception as e:
         print("Slack error:", e)
