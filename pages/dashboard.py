@@ -20,7 +20,13 @@ if str(REPO_ROOT) not in sys.path:
 from agent import db
 from agent.action import get_action_success_rate, update_outcome
 from agent.detect import detect_anomalies
-from agent.forecast import forecast_revenue
+from agent.forecast import (
+    backtest_segment,
+    forecast_per_segment,
+    forecast_revenue,
+    forecast_segment,
+    recent_top_segments,
+)
 from agent.memory import get_log_path
 from pages.run_agent import run_liveops_agent
 
@@ -171,19 +177,95 @@ if hasattr(success_rates, "empty") and not success_rates.empty:
 else:
     st.info("No success data yet — mark outcomes to start learning!")
 
-# ----------------- Forecast -----------------
+# ----------------- Forecast (per-segment + backtest) -----------------
 st.subheader("🔮 Revenue Forecast")
+
+fc_col1, fc_col2, fc_col3 = st.columns([2, 1, 1])
+with fc_col2:
+    horizon = st.number_input("Forecast horizon (days)", 3, 60, 14, 1, key="fc_horizon")
+with fc_col3:
+    top_n = st.number_input("Segments to surface", 1, 12, 6, 1, key="fc_topn")
+
 try:
-    forecast_df = forecast_revenue(user_csv_path, periods=10)
-    if not forecast_df.empty:
-        st.line_chart(forecast_df.set_index("ds")[["yhat", "yhat_lower", "yhat_upper"]])
-        future_anom = forecast_df[forecast_df["anomaly"]]
-        if not future_anom.empty:
-            st.warning(f"⚠️ Potential future anomalies: {len(future_anom)}")
-            st.dataframe(future_anom[["ds", "yhat", "anomaly"]])
-        else:
-            st.success("✅ No significant anomalies forecasted.")
-    else:
+    top_segs = recent_top_segments(df, int(top_n))
+except Exception:
+    top_segs = []
+
+seg_options = ["Global"] + [f"{r} • {p}" for (r, p) in top_segs]
+with fc_col1:
+    pick = st.selectbox("Segment", seg_options, key="fc_segment_pick")
+
+
+def _plot_forecast(fc_df: pd.DataFrame, title: str) -> None:
+    """Render a forecast frame: yhat with confidence band + observed overlay."""
+    if fc_df is None or fc_df.empty:
         st.info("Not enough history for a forecast yet.")
+        return
+    fig, ax = plt.subplots(figsize=(9, 3.5))
+    ax.fill_between(
+        fc_df["ds"], fc_df["yhat_lower"], fc_df["yhat_upper"],
+        alpha=0.20, label="Confidence band",
+    )
+    ax.plot(fc_df["ds"], fc_df["yhat"], linewidth=1.6, label="Forecast")
+    if "y_actual" in fc_df.columns:
+        observed = fc_df.dropna(subset=["y_actual"])
+        if not observed.empty:
+            ax.scatter(observed["ds"], observed["y_actual"], s=10, label="Observed")
+        anom = observed[observed.get("anomaly", False) == True]  # noqa: E712
+        if not anom.empty:
+            ax.scatter(anom["ds"], anom["y_actual"], s=40, marker="x", label="Anomaly")
+    ax.set_title(title)
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Revenue")
+    ax.legend(loc="upper left", fontsize=8)
+    fig.autofmt_xdate()
+    st.pyplot(fig)
+
+
+try:
+    if pick == "Global":
+        fc = forecast_revenue(df, periods=int(horizon))
+        _plot_forecast(fc, "Global daily revenue")
+        if not fc.empty:
+            future_anom = fc[fc["anomaly"] == True]  # noqa: E712
+            if not future_anom.empty:
+                st.warning(f"⚠️ Anomalous days flagged: {len(future_anom)}")
+                st.dataframe(
+                    future_anom[["ds", "yhat", "y_actual"]].tail(20),
+                    use_container_width=True,
+                )
+    else:
+        region, product_id = pick.split(" • ", 1)
+        fc = forecast_segment(df, region, product_id, periods=int(horizon))
+        _plot_forecast(fc, f"{region} • {product_id} — daily revenue")
+
+        with st.spinner("Backtesting (walk-forward CV)…"):
+            bt = backtest_segment(df, region, product_id, horizon=min(7, int(horizon)), folds=3)
+        b1, b2, b3, b4 = st.columns(4)
+        b1.metric("MAPE", f"{bt['mape']:.1f}%" if bt["mape"] == bt["mape"] else "—")
+        b2.metric("SMAPE", f"{bt['smape']:.1f}%" if bt["smape"] == bt["smape"] else "—")
+        b3.metric("RMSE", f"{bt['rmse']:.1f}" if bt["rmse"] == bt["rmse"] else "—")
+        b4.metric("Folds", int(bt["n_folds"]))
 except Exception as e:
     st.info(f"Forecast not available ({e}).")
+
+# ----- Per-segment scoreboard: backtest accuracy at a glance -----
+with st.expander("📋 Per-segment backtest scoreboard", expanded=False):
+    if not top_segs:
+        st.caption("Need region + product_id + revenue columns to score segments.")
+    else:
+        rows = []
+        for (region, product_id) in top_segs:
+            try:
+                bt = backtest_segment(df, region, product_id, horizon=min(7, int(horizon)), folds=3)
+            except Exception:
+                bt = {"mape": float("nan"), "smape": float("nan"), "rmse": float("nan"), "n_folds": 0}
+            rows.append({
+                "region": region,
+                "product_id": product_id,
+                "MAPE %": round(bt["mape"], 2) if bt["mape"] == bt["mape"] else None,
+                "SMAPE %": round(bt["smape"], 2) if bt["smape"] == bt["smape"] else None,
+                "RMSE": round(bt["rmse"], 2) if bt["rmse"] == bt["rmse"] else None,
+                "folds": int(bt["n_folds"]),
+            })
+        st.dataframe(pd.DataFrame(rows), use_container_width=True)
