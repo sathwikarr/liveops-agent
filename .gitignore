@@ -17,3 +17,6 @@ user_data/
 # OS
 .DS_Store
 venv/
+data/.csv_imported
+data/liveops.sqlite3
+user_data/
