@@ -113,10 +113,35 @@ def notify(
     body: str,
     severity: str = "medium",
     recipients: Optional[Iterable[str]] = None,
-) -> dict[str, bool]:
-    """Fan-out to enabled channels. Returns {channel: succeeded?}."""
+    dedupe_key: Optional[str] = None,
+    cooldown_seconds: Optional[int] = None,
+) -> dict:
+    """Fan-out to enabled channels. Returns {channel: succeeded?, ...}.
+
+    If `dedupe_key` is set, the same key won't fire again until
+    `cooldown_seconds` (default `ALERT_COOLDOWN_SECONDS` env, falling back to
+    1800 = 30 min) have passed since the last successful claim. Skipped
+    notifications return `skipped: True` and channel results False.
+    """
     severity = (severity or "medium").lower()
-    results: dict[str, bool] = {"slack": False, "email": False}
+    results: dict = {"slack": False, "email": False, "skipped": False}
+
+    if dedupe_key:
+        if cooldown_seconds is None:
+            try:
+                cooldown_seconds = int(os.getenv("ALERT_COOLDOWN_SECONDS", "1800"))
+            except ValueError:
+                cooldown_seconds = 1800
+        try:
+            from agent import db
+            allowed = db.should_notify(dedupe_key, cooldown_seconds=cooldown_seconds,
+                                       severity=severity)
+        except Exception as e:
+            print(f"[notify:dedupe] error (failing open): {e}")
+            allowed = True
+        if not allowed:
+            results["skipped"] = True
+            return results
 
     slack_min = os.getenv("ALERT_SLACK_MIN_SEVERITY", "low").lower()
     email_min = os.getenv("ALERT_EMAIL_MIN_SEVERITY", "high").lower()

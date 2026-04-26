@@ -85,11 +85,15 @@ def simulate_action(
         f"Recommended: {rec}\n"
         f"Selected action: {action}"
     )
+    # Dedupe key: same (user, region, product) combo won't notify twice
+    # within the cooldown window (default 30 min, ALERT_COOLDOWN_SECONDS env).
+    dedupe_key = f"{username or 'system'}:{region}:{product_id}"
     try:
         notify(
             subject=f"{action} — {product_id} in {region}",
             body=body,
             severity=severity,
+            dedupe_key=dedupe_key,
         )
     except Exception as e:
         print(f"[action] notify failed: {e}")

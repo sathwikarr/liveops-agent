@@ -60,6 +60,15 @@ CREATE TABLE IF NOT EXISTS actions (
 );
 CREATE INDEX IF NOT EXISTS ix_actions_user_ts ON actions(username, ts);
 CREATE INDEX IF NOT EXISTS ix_actions_outcome ON actions(outcome);
+
+-- One row per dedupe_key. We update ts on each successful claim so the
+-- cooldown window slides from the last fire, not the first.
+CREATE TABLE IF NOT EXISTS notifications (
+    dedupe_key TEXT PRIMARY KEY,
+    ts         TEXT NOT NULL,
+    severity   TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_notifications_ts ON notifications(ts);
 """
 
 
@@ -219,6 +228,55 @@ def action_success_rates(username: Optional[str] = None) -> pd.Series:
         return pd.Series(dtype=float)
     grouped = decided.groupby("action")["outcome"]
     return (grouped.apply(lambda s: (s == "success").sum() / len(s))).astype(float)
+
+
+# ---------------------------- notification dedupe -------------------------
+
+def should_notify(dedupe_key: str, cooldown_seconds: int = 1800,
+                  severity: Optional[str] = None) -> bool:
+    """Atomically check + claim a dedupe slot.
+
+    Returns True if no entry for this key exists within the cooldown window.
+    On True, also writes/updates the row so subsequent calls within the
+    window return False. Returns True (fail-open) if the dedupe table
+    operation itself errors — we'd rather over-notify than silently drop.
+    """
+    if not dedupe_key:
+        return True
+    init_db()
+    now = datetime.utcnow()
+    try:
+        with connect() as conn:
+            row = conn.execute(
+                "SELECT ts FROM notifications WHERE dedupe_key = ?",
+                (dedupe_key,),
+            ).fetchone()
+            if row is not None:
+                last = datetime.strptime(row["ts"], "%Y-%m-%dT%H:%M:%S")
+                age = (now - last).total_seconds()
+                if age < cooldown_seconds:
+                    return False
+            # Fire allowed — refresh the slot.
+            conn.execute(
+                """INSERT INTO notifications(dedupe_key, ts, severity)
+                   VALUES (?, ?, ?)
+                   ON CONFLICT(dedupe_key) DO UPDATE
+                   SET ts = excluded.ts, severity = excluded.severity""",
+                (dedupe_key, now.strftime("%Y-%m-%dT%H:%M:%S"), severity),
+            )
+        return True
+    except Exception as e:
+        print(f"[db:dedupe] error (failing open): {e}")
+        return True
+
+
+def recent_notifications(limit: int = 50) -> pd.DataFrame:
+    init_db()
+    with connect() as conn:
+        return pd.read_sql_query(
+            "SELECT dedupe_key, ts, severity FROM notifications ORDER BY ts DESC LIMIT ?",
+            conn, params=(limit,),
+        )
 
 
 # ---------------------------- one-time CSV migration -----------------------

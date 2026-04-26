@@ -2,8 +2,9 @@
 
 - `read_latest_data`: robust CSV loader (handles header / no-header).
 - `zscore_anomaly_detection`: legacy single-column, single-population z-score.
-- `detect_anomalies`: NEW. Per-segment z-score across multiple metrics.
-   Falls back to global when a segment has too few samples.
+- `detect_anomalies`: per-segment, multi-metric anomalies. Defaults to
+   IsolationForest from pyod when a segment has enough rows, falling back to
+   z-score for sparse segments. Pass `method="zscore"` for the older behavior.
 """
 from __future__ import annotations
 
@@ -11,6 +12,14 @@ from typing import Iterable, List, Optional
 
 import numpy as np
 import pandas as pd
+
+# Optional pyod — falls back to z-score if unavailable in the env.
+try:
+    from pyod.models.iforest import IForest  # type: ignore
+    HAS_IFOREST = True
+except Exception:
+    IForest = None  # type: ignore
+    HAS_IFOREST = False
 
 REQUIRED_COLS = ["timestamp", "region", "product_id", "orders", "inventory", "revenue"]
 DEFAULT_METRICS: tuple[str, ...] = ("revenue", "orders", "inventory")
@@ -87,6 +96,51 @@ def _zscore_series(values: pd.Series) -> pd.Series:
     return (series - mean) / std
 
 
+def _iforest_score_series(values: pd.Series) -> pd.Series:
+    """IsolationForest decision-function score, normalized to a z-like scale.
+
+    Higher absolute value = more anomalous. Returns NaNs if pyod isn't
+    installed, the series is too short, or training fails.
+    """
+    series = pd.to_numeric(values, errors="coerce")
+    if not HAS_IFOREST or series.dropna().size < 8:
+        return pd.Series(np.nan, index=series.index)
+    valid = series.dropna()
+    if valid.std(ddof=0) == 0:
+        return pd.Series(np.nan, index=series.index)
+    try:
+        model = IForest(contamination=0.05, random_state=42)
+        x = valid.to_numpy().reshape(-1, 1)
+        model.fit(x)
+        # decision_function: higher = more anomalous in pyod.
+        raw = model.decision_function(x)
+        # Normalize so the "z_score" stays comparable in scale to the z-score path.
+        std = float(np.std(raw))
+        if std == 0:
+            return pd.Series(np.nan, index=series.index)
+        z_like = (raw - float(np.mean(raw))) / std
+        out = pd.Series(np.nan, index=series.index)
+        out.loc[valid.index] = z_like
+        return out
+    except Exception:
+        return pd.Series(np.nan, index=series.index)
+
+
+def _score_series(values: pd.Series, method: str) -> pd.Series:
+    """Dispatch to the requested scorer, honoring 'auto' fallback."""
+    if method == "zscore":
+        return _zscore_series(values)
+    if method == "isoforest":
+        s = _iforest_score_series(values)
+        return s if not s.dropna().empty else _zscore_series(values)
+    # auto: prefer isoforest when we can, else z-score
+    if HAS_IFOREST and pd.to_numeric(values, errors="coerce").dropna().size >= 30:
+        s = _iforest_score_series(values)
+        if not s.dropna().empty:
+            return s
+    return _zscore_series(values)
+
+
 def zscore_anomaly_detection(
     df: pd.DataFrame,
     column: str,
@@ -122,6 +176,7 @@ def detect_anomalies(
     min_segment_rows: int = 8,
     min_global_rows: int = 20,
     group_by: tuple[str, ...] = ("region", "product_id"),
+    method: str = "auto",
 ) -> pd.DataFrame:
     """Per-segment, multi-metric anomaly detection.
 
@@ -152,7 +207,7 @@ def detect_anomalies(
             for keys, sub in df.groupby(list(group_by), dropna=False):
                 if len(sub) < min_segment_rows:
                     continue
-                z = _zscore_series(sub[metric])
+                z = _score_series(sub[metric], method=method)
                 hits = sub[z.abs() > threshold].copy()
                 hits["__z__"] = z[z.abs() > threshold]
                 for idx, row in hits.iterrows():
@@ -172,7 +227,7 @@ def detect_anomalies(
 
         # Global fallback for rows in small segments (or when no group cols)
         if len(df) >= min_global_rows:
-            z = _zscore_series(df[metric])
+            z = _score_series(df[metric], method=method)
             global_hits = df[z.abs() > threshold]
             for idx, row in global_hits.iterrows():
                 if idx in seg_index_used:
