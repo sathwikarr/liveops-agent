@@ -3,20 +3,25 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Secrets — NEVER commit these
 .env
-*.sqlite3
-
-# Streamlit
 .streamlit/secrets.toml
+streamlit/secrets.toml
 
-# Data
+# Local data + DB
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
 data/anomaly_log.csv
 data/action_log.csv
+data/.csv_imported
 user_data/
 
-# OS
-.DS_Store
+# Environments
 venv/
-data/.csv_imported
-data/liveops.sqlite3
-user_data/
+.venv/
+
+# OS / FUSE
+.DS_Store
+.fuse_hidden*
