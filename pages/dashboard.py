@@ -17,7 +17,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.append(str(REPO_ROOT))
 
-from agent import db
+from agent import db, ui
 from agent.action import get_action_success_rate, update_outcome
 from agent.detect import detect_anomalies
 from agent.forecast import (
@@ -32,17 +32,9 @@ from pages.run_agent import run_liveops_agent
 
 REQUIRED_COLS = {"region", "product_id", "revenue", "orders", "inventory"}
 
-# ----------------- Auth check -----------------
-if "username" not in st.session_state:
-    st.warning("⛔ Please log in to continue.")
-    try:
-        st.switch_page("app.py")
-    except Exception:
-        st.stop()
-
-username: str = st.session_state["username"]
-st.sidebar.success(f"Logged in as: {username}")
-st.sidebar.button("🚪 Log out", on_click=lambda: st.session_state.clear())
+# ----------------- Chrome + auth gate -----------------
+ui.apply_chrome("pages/dashboard.py", show_anon_banner=False)
+username: str = ui.require_auth()
 
 # ----------------- Sidebar settings -----------------
 st.sidebar.markdown("### Settings")

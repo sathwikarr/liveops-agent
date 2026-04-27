@@ -43,3 +43,25 @@ jobs:
           SMTP_HOST: ""
           GEMINI_API_KEY: ""
         run: pytest -v
+
+      # Eval harness — runs the agent against the 55-case corpus on the
+      # heuristic backend and fails if pass rate drops > 2pp below the
+      # pinned baseline. Only run on one Python version since it's slow-ish.
+      - name: Run agent evals
+        if: matrix.python-version == '3.11'
+        env:
+          GEMINI_API_KEY: ""
+        run: |
+          python -m analyst.evals \
+            --backend heuristic \
+            --baseline tests/fixtures/eval_baseline.json \
+            --min-pass-rate 0.95 \
+            --json eval_report.json
+
+      - name: Upload eval report
+        if: matrix.python-version == '3.11' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: eval_report.json
+          if-no-files-found: ignore

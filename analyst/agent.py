@@ -242,19 +242,39 @@ class AgentResult:
 
 # Each pattern → (tool_name, args). Order matters: more-specific first.
 _HEURISTIC_PATTERNS: List[tuple[str, str, Dict[str, Any]]] = [
-    (r"\b(churn|leaving|inactive|retention risk)\b", "churn_risk", {}),
-    (r"\b(cohort|retention|monthly retention)\b", "cohort_retention", {}),
-    (r"\b(elasticity|price sensitiv|how price-sensitive)\b", "price_elasticity", {}),
-    (r"\b(co.?purchas\w*|basket\w*|frequently bought|bundle\w*|cross.?sell\w*)\b", "co_purchases", {}),
-    (r"\b(quadrant|star product|cash cow|dog product|bcg)\b", "product_quadrants", {}),
-    (r"\b(segment|rfm|champion|loyal|at-?risk)\b", "segment_customers", {}),
-    (r"\btop\s+(\d+)?\s*customers?\b", "top_customers", {}),
-    (r"\b(best|top)\s+(\d+)?\s*(products?|sku)\b", "top_products", {}),
+    # Retention — match churn/churning/churned via \w*
+    (r"\b(churn\w*|leaving|inactive|retention risk)\b", "churn_risk", {}),
+    (r"\b(cohort\w*|monthly retention|retention curve|retention decay|retention by signup)\b",
+     "cohort_retention", {}),
+    # Pricing — also catch "price-sensitive", "pricing power", "demand drop when ... price"
+    (r"\b(elasticity|elastic|price[\s-]?sensitiv\w*|pricing power|how price[\s-]?sensitive|"
+     r"demand\s+drops?\s+when\s+(i\s+)?(raise|increase)\s+(the\s+)?prices?)\b",
+     "price_elasticity", {}),
+    # Basket
+    (r"\b(co.?purchas\w*|basket\w*|frequently bought|bundle\w*|cross.?sell\w*)\b",
+     "co_purchases", {}),
+    # BCG quadrants — accept plurals + "question mark(s)"
+    (r"\b(quadrants?|stars?|cash\s+cows?|dog\s+products?|bcg|question\s+marks?)\b",
+     "product_quadrants", {}),
+    # RFM/segments — \w* lets "segment", "segments", "segmentation" through
+    (r"\b(segment\w*|rfm|champion\w*|loyal(ty)?|at-?risk)\b", "segment_customers", {}),
+    # Top customers — also "biggest spenders" / "highest paying customers" / "best customer"
+    (r"\b(?:top|best|biggest|highest)\s+(\d+)?\s*"
+     r"(?:customer\w*|spender\w*|paying\s+customer\w*)\b",
+     "top_customers", {}),
+    # Top products — also "best-selling", "Which N products bring in the most..."
+    (r"\b(?:best.?selling|top|best|biggest)\s+(\d+)?\s*(?:products?|skus?)\b",
+     "top_products", {}),
+    (r"\bwhich\s+(\d+)\s+(?:products?|skus?)\b", "top_products", {}),
+    # Revenue cadence — daily/monthly/weekly fall through to weekly default
     (r"\b(daily|by day)\b.*revenue|revenue.*\b(daily|by day)\b", "revenue_by_period", {"freq": "D"}),
-    (r"\b(monthly|by month)\b.*revenue|revenue.*\b(monthly|by month)\b", "revenue_by_period", {"freq": "M"}),
+    (r"\b(monthly|by month)\b.*\b(revenue|sales)\b|\b(revenue|sales)\b.*\b(monthly|by month)\b",
+     "revenue_by_period", {"freq": "M"}),
     (r"\b(weekly|by week|trend|over time)\b", "revenue_by_period", {"freq": "W"}),
     (r"\b(revenue|sales)\b", "revenue_by_period", {"freq": "W"}),
-    (r"\b(schema|columns|what.* in (the|my) (data|dataset))\b", "describe_columns", {}),
+    # Schema
+    (r"\b(schema|columns?|what.* in (the|my) (data|dataset)|describe.*columns?)\b",
+     "describe_columns", {}),
 ]
 
 

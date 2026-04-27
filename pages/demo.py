@@ -41,7 +41,10 @@ ROLE_MAP = {
 }
 
 
+from agent import ui
+
 st.set_page_config(page_title="Analyst Demo", page_icon="🎬", layout="wide")
+ui.apply_chrome("pages/demo.py")
 st.title("🎬 Analyst Workbench — Live Demo")
 st.caption(
     "A synthetic retail dataset is auto-loaded and run through every stage "

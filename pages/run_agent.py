@@ -142,9 +142,9 @@ def _is_streamlit_runtime() -> bool:
 
 if _is_streamlit_runtime():
     import streamlit as st
+    from agent import ui as _ui
     st.set_page_config(page_title="Run Agent")
+    _ui.apply_chrome("pages/run_agent.py", show_anon_banner=False)
     st.title("▶️ Run LiveOps Agent")
-    if "username" not in st.session_state:
-        st.warning("⛔ Please log in first.")
-    else:
-        run_liveops_agent(st.session_state["username"])
+    _username = _ui.require_auth()
+    run_liveops_agent(_username)

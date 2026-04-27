@@ -35,13 +35,16 @@ from analyst import (
 )
 
 st.set_page_config(page_title="Analyst Workbench", layout="wide")
+
+from agent import ui as _ui
+_ui.apply_chrome("pages/analyst_workbench.py")
+
 st.title("🧠 Analyst Workbench")
 st.caption("Drop any tabular dataset — the workbench does ingestion, EDA, cleaning, analysis, prediction, and recommendations.")
 
-# Soft auth: if the user logged into the LiveOps app, reuse their username for bandit feedback.
-username = st.session_state.get("username")
-if not username:
-    st.info("Tip: log in via the main app to get personalised bandit-weighted recommendations.")
+# Soft auth: if the user logged in, reuse their username for bandit feedback.
+# Anonymous use is fully supported; bandit just falls back to a global model.
+username = _ui.current_username()
 
 # --------------------------------------------------------------------------- #
 # 1. Ingest
