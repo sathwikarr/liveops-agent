@@ -48,21 +48,85 @@ if not username:
 # --------------------------------------------------------------------------- #
 st.header("1. Ingest")
 
-uploaded = st.file_uploader("Upload CSV / Excel / JSON / JSONL", type=["csv", "tsv", "xlsx", "xls", "json", "jsonl"])
-sample = st.checkbox("Use bundled sample (joe.csv) instead", value=False)
+# Saved-connection store lives next to the rest of the app's user data
+from analyst.connectors import (
+    ConnectionStore, SavedConnection, REGISTRY as CONN_REG,
+    ConnectionError as ConnErr,
+)
+_conn_db = REPO_ROOT / "user_data" / "connections.db"
+_conn_store = ConnectionStore(_conn_db)
+
+src_tabs = st.tabs(["📁 File upload", "💾 Saved connection", "➕ New connection"])
 
 if "ingest" not in st.session_state:
     st.session_state.ingest = None
 
-if uploaded is not None:
-    raw = uploaded.read()
-    st.session_state.ingest = I.ingest(raw)
-elif sample:
-    sample_path = REPO_ROOT / "user_data" / "joe.csv"
-    if sample_path.exists():
-        st.session_state.ingest = I.ingest(sample_path)
+with src_tabs[0]:
+    uploaded = st.file_uploader(
+        "Upload CSV / Excel / JSON / JSONL",
+        type=["csv", "tsv", "xlsx", "xls", "json", "jsonl"],
+        key="upl_main",
+    )
+    sample = st.checkbox("Use bundled sample (joe.csv) instead", value=False)
+    if uploaded is not None:
+        raw = uploaded.read()
+        st.session_state.ingest = I.ingest(raw)
+    elif sample:
+        sample_path = REPO_ROOT / "user_data" / "joe.csv"
+        if sample_path.exists():
+            st.session_state.ingest = I.ingest(sample_path)
+        else:
+            st.warning("Sample file not found.")
+
+with src_tabs[1]:
+    saved = _conn_store.list()
+    if not saved:
+        st.info("No saved connections yet — create one in the next tab.")
     else:
-        st.warning("Sample file not found.")
+        names = [c.name for c in saved]
+        kinds = {c.name: c.kind for c in saved}
+        pick = st.selectbox(
+            "Connection",
+            names,
+            format_func=lambda n: f"{n}  ·  {kinds[n]}",
+        )
+        cc1, cc2 = st.columns([1, 1])
+        if cc1.button("🔄 Fetch / refresh", type="primary", key="conn_run"):
+            chosen = _conn_store.get(pick)
+            try:
+                with st.spinner(f"Fetching from {chosen.kind}…"):
+                    res = chosen.connector().fetch()
+                # Re-run ingest's schema inference on the fetched DataFrame
+                st.session_state.ingest = I.ingest(res.df)
+                st.success(f"Loaded {res.rows:,} rows from {res.source}")
+            except ConnErr as e:
+                st.error(f"Connection failed: {e}")
+        if cc2.button("🗑️ Delete", key="conn_del"):
+            _conn_store.delete(pick)
+            st.experimental_rerun() if hasattr(st, "experimental_rerun") else st.rerun()
+
+with src_tabs[2]:
+    kind = st.selectbox("Type", list(CONN_REG.keys()), key="new_kind")
+    name = st.text_input("Connection name (must be unique)", key="new_name")
+    schema = CONN_REG[kind].param_schema
+    new_params: dict = {}
+    for pname, ptype in schema.items():
+        if ptype == "secret":
+            new_params[pname] = st.text_input(
+                pname, type="password", key=f"new_{pname}"
+            )
+        else:
+            new_params[pname] = st.text_input(pname, key=f"new_{pname}")
+    if st.button("💾 Save connection", key="new_save"):
+        try:
+            sc = SavedConnection(
+                name=name.strip(), kind=kind,
+                params={k: v for k, v in new_params.items() if v},
+            )
+            _conn_store.save(sc)
+            st.success(f"Saved '{sc.name}' — switch to the Saved tab to fetch.")
+        except Exception as e:
+            st.error(f"Could not save: {e}")
 
 result = st.session_state.ingest
 if result is None:
@@ -259,7 +323,9 @@ else:
 # --------------------------------------------------------------------------- #
 st.header("7. Ask · What-if · Report")
 
-a, b, c = st.tabs(["Natural-language query", "What-if simulator", "Narrative report"])
+a, agent_tab, b, c = st.tabs(
+    ["Natural-language query", "🤖 Agent (tool-using)", "What-if simulator", "Narrative report"]
+)
 
 with a:
     q = st.text_input("Ask anything", value="What's the total revenue?")
@@ -271,6 +337,50 @@ with a:
             st.code(ans.expression, language="python")
         if ans.data is not None:
             st.dataframe(ans.data, use_container_width=True, hide_index=True)
+
+with agent_tab:
+    st.markdown(
+        "Ask a high-level question and the agent picks which analyst tools "
+        "to run, executes them on the live data, then synthesizes a "
+        "natural-language answer. Works offline via keyword routing — "
+        "uses Gemini when `GEMINI_API_KEY` is set."
+    )
+    from analyst import agent as Agent
+
+    examples = [
+        "Which customers are most likely to churn?",
+        "What are the top 5 products by revenue?",
+        "Show me the price elasticity per product",
+        "RFM segments breakdown",
+        "Co-purchase pairs",
+    ]
+    cols = st.columns(len(examples))
+    for col, ex in zip(cols, examples):
+        if col.button(ex, key=f"ex_{ex[:10]}"):
+            st.session_state["agent_q"] = ex
+
+    aq = st.text_input(
+        "Question",
+        value=st.session_state.get("agent_q", "Which customers are most likely to churn?"),
+        key="agent_q_input",
+    )
+    backend = st.radio(
+        "Backend", ["auto", "heuristic", "llm"], horizontal=True,
+        help="auto = LLM if API key present, else heuristic. heuristic = no API call.",
+    )
+    if st.button("Run agent", type="primary", key="agent_run"):
+        with st.spinner("Planning + running tools…"):
+            res = Agent.ask(aq, cleaned, rmap, backend=backend)
+        st.success(res.answer)
+        with st.expander(f"Plan ({res.plan.backend} backend, {len(res.plan.steps)} step(s))"):
+            for i, step in enumerate(res.plan.steps, 1):
+                st.markdown(f"**{i}. `{step.tool}`** — {step.why}")
+                if step.args:
+                    st.json(step.args)
+        with st.expander("Tool observations"):
+            for obs in res.observations:
+                st.markdown(f"**`{obs['tool']}`**")
+                st.json(obs["result"])
 
 with b:
     if elast_df.empty:

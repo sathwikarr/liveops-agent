@@ -1,0 +1,201 @@
+customer_id,signup_date,city,profile
+C2000,2024-12-25,Phoenix,casual
+C2001,2025-07-18,Austin,one-time
+C2002,2025-05-11,Chicago,loyal
+C2003,2025-12-04,Dallas,casual
+C2004,2025-09-03,Philadelphia,one-time
+C2005,2024-12-28,Philadelphia,casual
+C2006,2025-04-07,Houston,one-time
+C2007,2025-08-18,LA,champion
+C2008,2025-07-07,LA,champion
+C2009,2025-07-31,Chicago,one-time
+C2010,2025-07-02,Dallas,champion
+C2011,2025-07-29,Austin,loyal
+C2012,2025-02-17,Dallas,casual
+C2013,2025-10-20,Houston,one-time
+C2014,2025-05-24,Philadelphia,one-time
+C2015,2025-07-23,San Diego,casual
+C2016,2025-02-24,LA,champion
+C2017,2025-08-29,Dallas,loyal
+C2018,2025-02-21,NYC,loyal
+C2019,2025-09-20,NYC,champion
+C2020,2024-11-17,Philadelphia,loyal
+C2021,2025-03-02,Phoenix,champion
+C2022,2025-02-18,Dallas,casual
+C2023,2025-08-20,Austin,champion
+C2024,2025-07-01,San Antonio,casual
+C2025,2024-12-20,San Antonio,loyal
+C2026,2025-05-30,San Diego,loyal
+C2027,2024-11-28,LA,one-time
+C2028,2025-11-08,Philadelphia,champion
+C2029,2024-12-26,Houston,one-time
+C2030,2025-08-02,San Diego,loyal
+C2031,2025-02-02,Phoenix,champion
+C2032,2024-12-09,San Diego,casual
+C2033,2025-08-09,LA,one-time
+C2034,2025-08-04,NYC,champion
+C2035,2025-11-21,Houston,one-time
+C2036,2025-07-07,San Diego,loyal
+C2037,2025-05-25,NYC,loyal
+C2038,2024-11-02,San Antonio,loyal
+C2039,2025-06-21,Phoenix,loyal
+C2040,2025-11-10,Dallas,casual
+C2041,2025-07-08,Chicago,casual
+C2042,2025-02-20,NYC,loyal
+C2043,2025-08-05,NYC,casual
+C2044,2024-11-30,NYC,one-time
+C2045,2025-07-16,Dallas,casual
+C2046,2025-07-19,LA,loyal
+C2047,2024-12-06,Austin,one-time
+C2048,2025-03-01,San Antonio,champion
+C2049,2025-08-19,Houston,champion
+C2050,2024-11-21,Austin,casual
+C2051,2025-10-03,Austin,champion
+C2052,2025-04-11,Phoenix,casual
+C2053,2025-11-02,Philadelphia,loyal
+C2054,2025-05-22,Chicago,loyal
+C2055,2025-04-03,San Diego,casual
+C2056,2025-11-20,LA,loyal
+C2057,2025-09-15,Austin,champion
+C2058,2024-12-08,Dallas,one-time
+C2059,2025-03-16,Chicago,loyal
+C2060,2024-12-06,Houston,one-time
+C2061,2025-01-20,San Diego,loyal
+C2062,2025-10-27,Phoenix,one-time
+C2063,2025-10-01,Dallas,casual
+C2064,2025-08-11,Phoenix,champion
+C2065,2024-12-24,Chicago,one-time
+C2066,2024-12-25,Dallas,loyal
+C2067,2025-03-25,Austin,loyal
+C2068,2025-04-25,Houston,loyal
+C2069,2025-03-16,Dallas,casual
+C2070,2024-11-27,LA,casual
+C2071,2025-03-22,NYC,casual
+C2072,2025-11-30,Chicago,champion
+C2073,2025-03-15,Chicago,casual
+C2074,2025-08-10,San Antonio,one-time
+C2075,2024-12-28,LA,casual
+C2076,2025-10-20,Chicago,one-time
+C2077,2025-05-09,Austin,casual
+C2078,2025-06-09,Chicago,casual
+C2079,2025-05-06,NYC,champion
+C2080,2025-02-16,Houston,one-time
+C2081,2025-05-01,Dallas,casual
+C2082,2025-05-28,Austin,one-time
+C2083,2025-03-02,Chicago,one-time
+C2084,2025-01-30,San Antonio,one-time
+C2085,2025-11-13,Philadelphia,champion
+C2086,2025-05-30,Houston,one-time
+C2087,2025-10-26,LA,loyal
+C2088,2024-11-20,San Diego,loyal
+C2089,2025-06-24,Philadelphia,loyal
+C2090,2025-02-25,Houston,loyal
+C2091,2025-02-07,San Antonio,champion
+C2092,2024-12-06,Phoenix,loyal
+C2093,2025-07-19,San Antonio,loyal
+C2094,2025-08-02,Philadelphia,casual
+C2095,2024-12-30,Phoenix,one-time
+C2096,2025-03-16,NYC,loyal
+C2097,2025-06-11,Philadelphia,champion
+C2098,2025-04-10,San Antonio,one-time
+C2099,2025-07-20,LA,casual
+C2100,2025-08-23,Houston,loyal
+C2101,2025-10-29,San Antonio,loyal
+C2102,2025-08-03,Houston,champion
+C2103,2024-12-06,Philadelphia,loyal
+C2104,2025-10-06,LA,casual
+C2105,2025-04-03,Dallas,one-time
+C2106,2025-05-29,Philadelphia,loyal
+C2107,2025-04-01,Dallas,casual
+C2108,2025-06-04,San Antonio,champion
+C2109,2025-01-29,Austin,casual
+C2110,2025-05-27,Dallas,casual
+C2111,2025-04-05,Phoenix,one-time
+C2112,2025-08-24,Austin,loyal
+C2113,2025-06-27,San Diego,casual
+C2114,2025-02-18,Dallas,casual
+C2115,2025-11-12,Chicago,casual
+C2116,2025-03-26,Dallas,casual
+C2117,2025-09-14,Philadelphia,casual
+C2118,2025-11-20,Houston,champion
+C2119,2025-02-24,Houston,casual
+C2120,2024-11-24,Houston,champion
+C2121,2025-09-09,LA,one-time
+C2122,2025-09-19,Austin,casual
+C2123,2025-10-23,San Antonio,loyal
+C2124,2025-03-05,Chicago,casual
+C2125,2024-11-03,LA,casual
+C2126,2025-02-21,Chicago,one-time
+C2127,2025-10-23,Dallas,one-time
+C2128,2025-08-13,Houston,casual
+C2129,2025-01-02,San Diego,one-time
+C2130,2025-06-26,Dallas,champion
+C2131,2025-09-01,Philadelphia,one-time
+C2132,2025-06-15,Austin,one-time
+C2133,2025-07-17,San Antonio,one-time
+C2134,2025-08-08,San Diego,one-time
+C2135,2025-11-16,San Diego,one-time
+C2136,2025-11-20,Houston,casual
+C2137,2025-03-22,Dallas,one-time
+C2138,2025-03-03,Phoenix,casual
+C2139,2025-11-01,Phoenix,casual
+C2140,2025-04-21,Philadelphia,loyal
+C2141,2024-12-12,Chicago,one-time
+C2142,2025-05-16,Chicago,loyal
+C2143,2024-12-03,San Antonio,one-time
+C2144,2025-08-05,San Diego,casual
+C2145,2025-02-14,San Antonio,casual
+C2146,2025-11-30,Austin,loyal
+C2147,2024-11-11,Austin,one-time
+C2148,2024-11-04,Philadelphia,loyal
+C2149,2025-05-19,San Antonio,loyal
+C2150,2025-11-12,Dallas,casual
+C2151,2025-02-21,San Diego,one-time
+C2152,2025-06-12,San Diego,loyal
+C2153,2025-04-22,San Antonio,champion
+C2154,2025-06-28,Chicago,one-time
+C2155,2025-08-01,NYC,one-time
+C2156,2025-08-31,Austin,one-time
+C2157,2024-12-13,San Antonio,casual
+C2158,2025-06-25,Chicago,champion
+C2159,2025-05-14,Philadelphia,champion
+C2160,2025-04-17,Philadelphia,loyal
+C2161,2025-05-14,Phoenix,one-time
+C2162,2025-06-04,Phoenix,one-time
+C2163,2025-06-29,NYC,one-time
+C2164,2024-11-27,Philadelphia,one-time
+C2165,2024-12-06,NYC,loyal
+C2166,2025-03-07,Houston,one-time
+C2167,2025-09-15,Chicago,one-time
+C2168,2025-07-01,LA,loyal
+C2169,2025-02-20,San Diego,casual
+C2170,2025-11-28,Philadelphia,casual
+C2171,2025-09-07,LA,loyal
+C2172,2025-01-23,Phoenix,one-time
+C2173,2024-11-14,Phoenix,champion
+C2174,2025-05-12,San Antonio,casual
+C2175,2025-02-10,LA,one-time
+C2176,2025-09-18,Houston,casual
+C2177,2025-12-01,Phoenix,champion
+C2178,2025-09-04,LA,one-time
+C2179,2025-08-17,NYC,one-time
+C2180,2025-06-08,Philadelphia,loyal
+C2181,2025-09-28,Philadelphia,champion
+C2182,2025-06-04,San Diego,champion
+C2183,2025-05-05,San Diego,champion
+C2184,2025-06-11,Chicago,one-time
+C2185,2025-09-30,Phoenix,one-time
+C2186,2025-08-03,San Diego,casual
+C2187,2025-11-10,Austin,casual
+C2188,2025-03-06,LA,loyal
+C2189,2025-06-19,Houston,loyal
+C2190,2025-08-19,Austin,one-time
+C2191,2025-04-22,NYC,casual
+C2192,2025-04-16,Chicago,casual
+C2193,2025-05-01,Phoenix,casual
+C2194,2025-09-02,Phoenix,loyal
+C2195,2025-07-23,Houston,casual
+C2196,2025-11-04,San Antonio,champion
+C2197,2025-11-24,Houston,casual
+C2198,2025-09-27,San Diego,casual
+C2199,2024-11-09,LA,casual
