@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Run agent · LiveOps Agent{% endblock %}
+
+{% block content %}
+<header class="mb-8">
+  <div class="text-xs uppercase tracking-widest text-accent-500">agent · @{{ user }}</div>
+  <h1 class="mt-1 text-3xl font-bold tracking-tight">Run an ops pass</h1>
+  <p class="mt-2 max-w-2xl text-slate-300">
+    Walks the full pipeline against your sandbox dataset: ingest → clean → score → plan → recommend → notify.
+    Notifications are dry-run unless you've configured Slack/SMTP env vars.
+  </p>
+</header>
+
+<div x-data="{ running: false, result: null, error: null, async run() {
+    this.running = true; this.error = null; this.result = null;
+    try {
+      const res = await fetch('/api/agent/ask', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ question: 'give me the daily ops summary', backend: 'heuristic' }),
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      this.result = await res.json();
+    } catch (e) { this.error = e.message; }
+    finally { this.running = false; }
+  } }">
+  <button @click="run()" :disabled="running"
+    class="rounded-lg bg-accent-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-500 disabled:opacity-60">
+    <span x-show="!running">▶ Run now</span>
+    <span x-show="running">Running…</span>
+  </button>
+
+  <template x-if="error">
+    <div class="mt-4 rounded-lg border border-rose-700 bg-rose-700/10 p-3 text-sm text-rose-300" x-text="error"></div>
+  </template>
+
+  <template x-if="result">
+    <div class="mt-6 space-y-4">
+      <div class="rounded-2xl border border-accent-700/40 bg-accent-700/5 p-5">
+        <div class="text-xs uppercase tracking-wide text-accent-500">Summary</div>
+        <pre class="mt-2 whitespace-pre-wrap font-mono text-sm leading-relaxed text-slate-200" x-text="result.answer"></pre>
+      </div>
+      <div class="rounded-xl border border-ink-800 bg-ink-900/40 p-5">
+        <div class="text-xs uppercase tracking-wide text-slate-400">Plan + observations</div>
+        <pre class="mt-2 max-h-96 overflow-auto rounded bg-ink-950 p-3 font-mono text-xs text-slate-300" x-text="JSON.stringify({plan: result.plan, observations: result.observations}, null, 2)"></pre>
+      </div>
+    </div>
+  </template>
+</div>
+{% endblock %}

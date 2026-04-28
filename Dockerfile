@@ -7,7 +7,7 @@
 # smaller than the single-stage version and rebuilds skip Prophet's stan compile.
 #
 # Build:    docker build -t liveops-agent .
-# Run UI:   docker run --rm -p 8501:8501 --env-file .env -v "$PWD/data:/app/data" liveops-agent
+# Run UI:   docker run --rm -p 8000:8000 --env-file .env -v "$PWD/data:/app/data" liveops-agent
 # Run loop: docker run --rm --env-file .env -v "$PWD/data:/app/data" liveops-agent python auto_agent.py
 
 # --------------------------------------------------------------------------- #
@@ -44,10 +44,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    STREAMLIT_SERVER_HEADLESS=true \
-    STREAMLIT_SERVER_PORT=8501 \
-    STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
-    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    PORT=8000 \
+    HOST=0.0.0.0
 
 # Runtime deps only — libpq5 for psycopg2, curl for the healthcheck.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -75,11 +73,11 @@ VOLUME ["/app/data", "/app/user_data"]
 
 USER appuser
 
-EXPOSE 8501
+EXPOSE 8000
 
-# Healthcheck pings Streamlit's internal status endpoint.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD curl -fsS http://localhost:8501/_stcore/health || exit 1
+# Healthcheck pings the FastAPI /healthz endpoint.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -fsS http://localhost:8000/healthz || exit 1
 
-# Default = the dashboard. Override CMD to run auto_agent.py instead.
-CMD ["streamlit", "run", "app.py"]
+# Default = the FastAPI website. Override CMD to run auto_agent.py instead.
+CMD ["uvicorn", "web.server:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]

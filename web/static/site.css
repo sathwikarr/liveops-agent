@@ -1,0 +1,20 @@
+/* Tiny stylesheet that layers on top of Tailwind Play CDN. Keep this small —
+   anything sweeping should go through Tailwind utility classes instead. */
+
+html { color-scheme: dark; }
+
+::selection { background: #10b98155; color: #f8fafc; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #262833; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #2f323f; }
+
+/* Subtle code styling inside prose blocks */
+code:not(pre code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+}
+
+/* Tailwind Play CDN flicker mitigation */
+[x-cloak] { display: none !important; }

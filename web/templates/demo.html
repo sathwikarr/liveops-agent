@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Demo · LiveOps Agent{% endblock %}
+
+{% block content %}
+<header class="mb-8">
+  <div class="text-xs uppercase tracking-widest text-accent-500">demo · public</div>
+  <h1 class="mt-1 text-3xl font-bold tracking-tight">Bundled retail dataset</h1>
+  <p class="mt-2 max-w-2xl text-slate-300">
+    Loaded from <code class="rounded bg-ink-800 px-1.5 py-0.5 font-mono text-xs">analyst/sample_data/retail_orders.csv</code>.
+    Same data the eval harness runs against — every number on this page is recomputed from the file each request.
+  </p>
+</header>
+
+<section class="grid grid-cols-2 gap-3 md:grid-cols-4">
+  {% set kpis = [
+    ('Revenue', kpi_revenue|money),
+    ('Orders', '{:,}'.format(kpi_orders)),
+    ('Customers', '{:,}'.format(kpi_customers)),
+    ('Products', '{:,}'.format(kpi_products)),
+  ] %}
+  {% for label, value in kpis %}
+    <div class="rounded-xl border border-ink-800 bg-ink-900/40 p-5">
+      <div class="text-xs uppercase tracking-wide text-slate-400">{{ label }}</div>
+      <div class="mt-1 text-2xl font-semibold tracking-tight">{{ value }}</div>
+    </div>
+  {% endfor %}
+</section>
+
+<section class="mt-10">
+  <div class="flex items-baseline justify-between">
+    <h2 class="text-lg font-semibold">First 8 rows</h2>
+    <span class="text-xs text-slate-500">{{ columns|length }} columns</span>
+  </div>
+  <div class="mt-3 overflow-x-auto rounded-xl border border-ink-800 bg-ink-900/40">
+    <table class="min-w-full text-sm">
+      <thead class="bg-ink-800/60 text-xs uppercase tracking-wide text-slate-400">
+        <tr>{% for c in columns %}<th class="px-3 py-2 text-left font-medium">{{ c }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody class="divide-y divide-ink-800">
+        {% for row in preview_rows %}
+          <tr class="hover:bg-ink-800/40">
+            {% for c in columns %}<td class="whitespace-nowrap px-3 py-2 text-slate-300">{{ row[c] }}</td>{% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="mt-10 grid gap-6 md:grid-cols-2">
+  <a href="/workbench" class="group rounded-2xl border border-ink-800 bg-ink-900/40 p-6 transition hover:border-accent-700/40 hover:bg-ink-900/70">
+    <div class="text-sm font-medium text-accent-500">Next →</div>
+    <div class="mt-1 text-lg font-semibold group-hover:text-white">Ask the agent a question</div>
+    <div class="mt-2 text-sm text-slate-400">"top 5 products", "who is about to churn", "show me cohort retention".</div>
+  </a>
+  <a href="/evals" class="group rounded-2xl border border-ink-800 bg-ink-900/40 p-6 transition hover:border-accent-700/40 hover:bg-ink-900/70">
+    <div class="text-sm font-medium text-accent-500">How honest is it?</div>
+    <div class="mt-1 text-lg font-semibold group-hover:text-white">See the eval harness →</div>
+    <div class="mt-2 text-sm text-slate-400">55 graded cases, pass rate pinned, regression-checked in CI.</div>
+  </a>
+</section>
+{% endblock %}

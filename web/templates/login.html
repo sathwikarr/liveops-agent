@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Sign up' if mode == 'signup' else 'Log in' }} · LiveOps Agent{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-md">
+  <div class="rounded-2xl border border-ink-800 bg-ink-900/40 p-6">
+    <div class="flex border-b border-ink-800 text-sm font-medium">
+      <a href="/login?next={{ next }}"
+         class="-mb-px border-b-2 px-4 py-2 transition
+                {% if mode == 'login' %}border-accent-500 text-white{% else %}border-transparent text-slate-400 hover:text-white{% endif %}">
+        Log in
+      </a>
+      <a href="/signup?next={{ next }}"
+         class="-mb-px border-b-2 px-4 py-2 transition
+                {% if mode == 'signup' %}border-accent-500 text-white{% else %}border-transparent text-slate-400 hover:text-white{% endif %}">
+        Sign up
+      </a>
+    </div>
+
+    <form method="post" action="{% if mode == 'signup' %}/signup{% else %}/login{% endif %}" class="mt-5 space-y-4">
+      <input type="hidden" name="next" value="{{ next }}">
+
+      <div>
+        <label class="block text-sm text-slate-300">Username</label>
+        <input name="username" required autocomplete="username" minlength="3" maxlength="32"
+          pattern="[A-Za-z0-9_\-]{3,32}"
+          class="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-950 p-2.5 text-sm placeholder-slate-500 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+          placeholder="3–32 chars, letters/digits/_/-">
+      </div>
+      <div>
+        <label class="block text-sm text-slate-300">Password</label>
+        <input name="password" required type="password"
+          autocomplete="{% if mode == 'signup' %}new-password{% else %}current-password{% endif %}"
+          minlength="8"
+          class="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-950 p-2.5 text-sm placeholder-slate-500 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+          placeholder="at least 8 characters">
+      </div>
+      {% if mode == 'signup' %}
+        <div>
+          <label class="block text-sm text-slate-300">Confirm password</label>
+          <input name="confirm" type="password" required minlength="8"
+            class="mt-1 block w-full rounded-lg border border-ink-700 bg-ink-950 p-2.5 text-sm placeholder-slate-500 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500">
+        </div>
+      {% endif %}
+
+      <button type="submit"
+        class="w-full rounded-lg bg-accent-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-500">
+        {% if mode == 'signup' %}Create account{% else %}Log in{% endif %}
+      </button>
+    </form>
+
+    <p class="mt-4 text-center text-xs text-slate-400">
+      {% if mode == 'signup' %}
+        Already have an account? <a class="text-accent-500 hover:underline" href="/login?next={{ next }}">Log in</a>.
+      {% else %}
+        New here? <a class="text-accent-500 hover:underline" href="/signup?next={{ next }}">Create an account</a>.
+      {% endif %}
+    </p>
+  </div>
+
+  <p class="mt-4 text-center text-xs text-slate-500">
+    Or skip auth entirely — <a class="text-accent-500 hover:underline" href="/demo">try the demo</a> ·
+    <a class="text-accent-500 hover:underline" href="/workbench">workbench</a> ·
+    <a class="text-accent-500 hover:underline" href="/evals">evals</a>.
+  </p>
+</div>
+{% endblock %}

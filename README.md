@@ -19,8 +19,8 @@
 git clone https://github.com/sathwikarr/liveops-agent.git
 cd liveops-agent
 docker build -t liveops-agent .
-docker run --rm -p 8501:8501 liveops-agent
-# → open http://localhost:8501, sign up, click "Demo" in the sidebar
+docker run --rm -p 8000:8000 liveops-agent
+# → open http://localhost:8000 — landing page, then /demo, /workbench, /evals (no signup needed)
 ```
 
 The **Demo** page auto-loads a bundled retail dataset (3,878 orders × 30 SKUs ×
@@ -44,7 +44,7 @@ The repo ships **two** complementary products that share auth, DB, and notificat
 | Memory           | SQLite (WAL) — `users`, `anomalies`, `actions`                                        |
 | Forecasting      | Prophet per-segment + adaptive resample + walk-forward CV (MAPE / SMAPE / RMSE)       |
 | Auth             | bcrypt signup + login, scoped per-user data                                           |
-| Runners          | Streamlit dashboard (`app.py`) + standalone CLI loop (`auto_agent.py`)                |
+| Runners          | FastAPI website (`web.server:app`) + standalone CLI loop (`auto_agent.py`)            |
 
 ### 🟣 Analyst Workbench — exploratory data product (9 stages)
 
@@ -187,14 +187,15 @@ cd liveops-agent
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env             # fill in GEMINI_API_KEY (optional)
-streamlit run app.py
+uvicorn web.server:app --reload  # → http://127.0.0.1:8000
 ```
 
-Sign up, then choose your path from the sidebar:
+Open the landing page, then jump to whichever surface fits — no signup required for the public ones:
 
-- **Demo** — see the full analyst pipeline on bundled data, no setup.
-- **Analyst Workbench** — upload your own CSV (or wire up a Postgres connection).
-- **Dashboard** — the ops vertical: ingest a stream, run the agent, watch alerts.
+- **/demo** — bundled retail dataset, KPIs + first 8 rows, recomputed each load.
+- **/workbench** — ask the agent in plain English; watch it pick tools and run them.
+- **/evals** — fire the 55-case eval harness, baseline-pinned and regression-checked.
+- **/dashboard** + **/run-agent** — auth-gated ops vertical (sign up at /signup).
 
 To run the headless ops loop:
 
@@ -223,9 +224,10 @@ See `.env.example` for the full list. Most are optional — the app degrades gra
 
 ## Tests
 
-**226 pytest tests** cover auth, DB, dedupe, detect (z-score + IForest), forecast,
-bandit, notify, plus every analyst stage, the LLM agent loop, connectors, charts,
-and the pinboard. CI runs on Python 3.11 + 3.12 — see `.github/workflows/tests.yml`.
+**268 pytest tests** cover auth, DB, dedupe, detect (z-score + IForest), forecast,
+bandit, notify, every analyst stage, the LLM agent loop, connectors, charts, the
+pinboard, the 55-case eval harness, and the FastAPI routes (signup→login→dashboard,
+JSON APIs, anonymous redirects). CI runs on Python 3.11 + 3.12 — see `.github/workflows/tests.yml`.
 
 ```bash
 pip install pytest
@@ -240,7 +242,7 @@ SLACK_WEBHOOK="" SMTP_HOST="" GEMINI_API_KEY="" pytest -v
 
 ```bash
 docker build -t liveops-agent .                       # multi-stage, non-root
-docker run --rm -p 8501:8501 \
+docker run --rm -p 8000:8000 \
   --env-file .env \
   -v "$PWD/data:/app/data" \
   liveops-agent

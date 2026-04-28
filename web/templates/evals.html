@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Evals · LiveOps Agent{% endblock %}
+
+{% block content %}
+<header class="mb-8 flex flex-wrap items-end justify-between gap-6">
+  <div>
+    <div class="text-xs uppercase tracking-widest text-accent-500">eval harness · public</div>
+    <h1 class="mt-1 text-3xl font-bold tracking-tight">{{ n_cases }} cases × 10 tools, scored four ways.</h1>
+    <p class="mt-2 max-w-2xl text-slate-300">
+      Tool-match, args-match, no-forbidden, must-succeed. Pass on tool-match ≥ 0.5 and clean must-succeed.
+      CI fails on any &gt; 2pp regression vs. the pinned baseline below.
+    </p>
+  </div>
+  {% if baseline %}
+    <div class="rounded-2xl border border-ink-800 bg-ink-900/40 p-5 text-right">
+      <div class="text-xs uppercase tracking-wide text-slate-400">Pinned baseline</div>
+      <div class="mt-1 text-3xl font-semibold">{{ '%.1f'|format(baseline.pass_rate * 100) }}%</div>
+      <div class="text-xs text-slate-400">{{ baseline.n_passed }} / {{ baseline.n_cases }} on backend = {{ baseline.backend }}</div>
+    </div>
+  {% endif %}
+</header>
+
+<div x-data="evalRunner()" class="grid gap-8 md:grid-cols-5">
+
+  <!-- Controls + summary -->
+  <section class="md:col-span-2">
+    <div class="rounded-2xl border border-ink-800 bg-ink-900/40 p-5">
+      <div class="text-xs uppercase tracking-wide text-slate-400">Run config</div>
+      <label class="mt-3 block text-sm">Backend</label>
+      <select x-model="backend" class="mt-1 w-full rounded-lg border border-ink-700 bg-ink-950 p-2 text-sm">
+        <option value="heuristic">heuristic (deterministic)</option>
+        <option value="auto">auto (LLM if configured)</option>
+        <option value="llm">llm (force Gemini)</option>
+      </select>
+
+      <label class="mt-4 block text-sm">Tags (filter, OR)</label>
+      <div class="mt-1 flex flex-wrap gap-1.5">
+        {% for tag in tags %}
+          <button type="button" @click="toggleTag('{{ tag }}')"
+            :class="tags.includes('{{ tag }}') ? 'border-accent-500 bg-accent-500/15 text-accent-500' : 'border-ink-700 bg-ink-800 text-slate-300 hover:bg-ink-700'"
+            class="rounded-full border px-3 py-1 text-xs">{{ tag }}</button>
+        {% endfor %}
+      </div>
+
+      <button :disabled="running" @click="run()"
+        class="mt-5 w-full rounded-lg bg-accent-600 py-2 text-sm font-medium text-white transition hover:bg-accent-500 disabled:opacity-60">
+        <span x-show="!running">▶ Run evals</span>
+        <span x-show="running">Running…</span>
+      </button>
+      <div x-show="running" class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-ink-800">
+        <div class="h-full bg-accent-500 transition-all" :style="`width: ${progress}%`"></div>
+      </div>
+    </div>
+
+    <template x-if="report">
+      <div class="mt-5 grid grid-cols-2 gap-3">
+        <div class="rounded-xl border border-ink-800 bg-ink-900/40 p-4">
+          <div class="text-xs uppercase tracking-wide text-slate-400">Pass rate</div>
+          <div class="mt-1 text-2xl font-semibold" x-text="(report.pass_rate * 100).toFixed(1) + '%'"></div>
+          <div class="text-xs text-slate-400" x-text="report.n_passed + ' / ' + report.n_cases"></div>
+        </div>
+        <div class="rounded-xl border border-ink-800 bg-ink-900/40 p-4">
+          <div class="text-xs uppercase tracking-wide text-slate-400">Mean overall</div>
+          <div class="mt-1 text-2xl font-semibold" x-text="report.mean_overall.toFixed(3)"></div>
+        </div>
+        <div class="rounded-xl border border-ink-800 bg-ink-900/40 p-4">
+          <div class="text-xs uppercase tracking-wide text-slate-400">Tool-pick</div>
+          <div class="mt-1 text-2xl font-semibold" x-text="report.mean_tool_match.toFixed(3)"></div>
+        </div>
+        <div class="rounded-xl border border-ink-800 bg-ink-900/40 p-4">
+          <div class="text-xs uppercase tracking-wide text-slate-400">Args</div>
+          <div class="mt-1 text-2xl font-semibold" x-text="report.mean_args_match.toFixed(3)"></div>
+        </div>
+
+        <template x-if="baseline">
+          <div :class="deltaClass()" class="col-span-2 rounded-xl border p-4 text-sm">
+            <span x-text="deltaLabel()"></span>
+          </div>
+        </template>
+
+        <a class="col-span-2 mt-1 text-center text-xs text-slate-400 hover:text-white"
+           :href="downloadUrl" :download="`eval_report_${report.backend}.json`">⤓ Download report (JSON)</a>
+      </div>
+    </template>
+  </section>
+
+  <!-- Results -->
+  <section class="md:col-span-3">
+    <template x-if="!report && !running">
+      <div class="rounded-2xl border border-dashed border-ink-700 bg-ink-900/20 p-10 text-center text-sm text-slate-400">
+        Pick a backend + filters, then click <strong class="text-slate-200">▶ Run evals</strong>.
+        ~5 sec on heuristic.
+      </div>
+    </template>
+
+    <template x-if="report">
+      <div class="space-y-6">
+        <!-- Per-tool bars -->
+        <div class="rounded-2xl border border-ink-800 bg-ink-900/40 p-5">
+          <h2 class="text-sm font-semibold">Per-tool pass rate</h2>
+          <ul class="mt-3 space-y-2 text-sm">
+            <template x-for="row in perToolRows" :key="row.tool">
+              <li class="flex items-center gap-3">
+                <code class="w-44 shrink-0 truncate font-mono text-xs text-slate-300" x-text="row.tool"></code>
+                <div class="relative h-5 grow overflow-hidden rounded bg-ink-800">
+                  <div class="h-full" :class="row.cls" :style="`width: ${row.pct}%`"></div>
+                  <div class="absolute inset-0 flex items-center justify-end pr-2 text-xs font-medium text-slate-100" x-text="row.label"></div>
+                </div>
+                <span class="w-12 shrink-0 text-right text-xs text-slate-400" x-text="`n=${row.n}`"></span>
+              </li>
+            </template>
+          </ul>
+        </div>
+
+        <!-- Per-case table -->
+        <div class="rounded-2xl border border-ink-800 bg-ink-900/40">
+          <div class="flex items-center justify-between p-5 pb-2">
+            <h2 class="text-sm font-semibold">Per-case detail</h2>
+            <input x-model="filterText" placeholder="filter..."
+              class="rounded-lg border border-ink-700 bg-ink-950 px-2 py-1 text-xs text-slate-200 placeholder-slate-500 focus:border-accent-500 focus:outline-none">
+          </div>
+          <div class="max-h-[480px] overflow-auto">
+            <table class="min-w-full text-sm">
+              <thead class="sticky top-0 bg-ink-900/95 text-xs uppercase tracking-wide text-slate-400 backdrop-blur">
+                <tr>
+                  <th class="px-3 py-2 text-left font-medium">id</th>
+                  <th class="px-3 py-2 text-left font-medium">question</th>
+                  <th class="px-3 py-2 text-left font-medium">planned</th>
+                  <th class="px-3 py-2 text-right font-medium">tool</th>
+                  <th class="px-3 py-2 text-right font-medium">args</th>
+                  <th class="px-3 py-2 text-right font-medium">overall</th>
+                  <th class="px-3 py-2 text-right font-medium"></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-ink-800">
+                <template x-for="r in filteredCases" :key="r.case_id">
+                  <tr class="hover:bg-ink-800/40">
+                    <td class="whitespace-nowrap px-3 py-2 font-mono text-xs text-slate-300" x-text="r.case_id"></td>
+                    <td class="px-3 py-2 text-slate-300" x-text="r.question"></td>
+                    <td class="whitespace-nowrap px-3 py-2 font-mono text-xs text-slate-400" x-text="(r.planned_tools || []).join(', ') || '—'"></td>
+                    <td class="px-3 py-2 text-right tabular-nums text-slate-300" x-text="r.tool_match.toFixed(2)"></td>
+                    <td class="px-3 py-2 text-right tabular-nums text-slate-300" x-text="r.args_match.toFixed(2)"></td>
+                    <td class="px-3 py-2 text-right tabular-nums" :class="r.passed ? 'text-accent-500' : 'text-rose-400'" x-text="r.overall.toFixed(2)"></td>
+                    <td class="px-3 py-2 text-right" x-text="r.passed ? '✓' : '✕'"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Failures -->
+        <template x-if="failures.length">
+          <div class="rounded-2xl border border-rose-700/40 bg-rose-700/5 p-5">
+            <h2 class="text-sm font-semibold text-rose-300" x-text="`Failures (${failures.length})`"></h2>
+            <div class="mt-3 space-y-2 text-sm">
+              <template x-for="r in failures" :key="r.case_id">
+                <details class="rounded border border-ink-800 bg-ink-950/40 p-3">
+                  <summary class="cursor-pointer">
+                    <code class="font-mono text-xs text-rose-400" x-text="r.case_id"></code>
+                    <span class="ml-2 text-slate-300" x-text="r.question"></span>
+                  </summary>
+                  <ul class="mt-2 list-disc pl-6 text-xs text-slate-400">
+                    <template x-for="reason in r.failed_reasons"><li x-text="reason"></li></template>
+                  </ul>
+                </details>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+  </section>
+</div>
+
+<script>
+  function evalRunner() {
+    return {
+      backend: 'heuristic',
+      tags: [],
+      running: false,
+      progress: 0,
+      report: null,
+      filterText: '',
+      baseline: {{ baseline|tojson if baseline else 'null' }},
+      downloadUrl: '#',
+      toggleTag(t) { this.tags = this.tags.includes(t) ? this.tags.filter(x => x !== t) : [...this.tags, t]; },
+      get perToolRows() {
+        if (!this.report || !this.report.per_tool) return [];
+        return Object.entries(this.report.per_tool)
+          .map(([tool, s]) => {
+            const pct = (s.pass_rate * 100);
+            const cls = pct >= 80 ? 'bg-accent-500/80'
+                     : pct >= 50 ? 'bg-amber-400/80' : 'bg-rose-500/80';
+            return { tool, pct, cls, n: s.n, label: pct.toFixed(0) + '%' };
+          })
+          .sort((a, b) => a.pct - b.pct);
+      },
+      get filteredCases() {
+        if (!this.report) return [];
+        const f = (this.filterText || '').toLowerCase();
+        if (!f) return this.report.cases;
+        return this.report.cases.filter(r =>
+          r.case_id.toLowerCase().includes(f) ||
+          (r.question || '').toLowerCase().includes(f) ||
+          (r.planned_tools || []).join(',').toLowerCase().includes(f));
+      },
+      get failures() { return (this.report?.cases || []).filter(r => !r.passed); },
+      deltaClass() {
+        if (!this.baseline || !this.report) return 'border-ink-700 bg-ink-800 text-slate-300';
+        const d = this.report.pass_rate - this.baseline.pass_rate;
+        if (d < -0.02) return 'border-rose-700 bg-rose-700/15 text-rose-300';
+        if (d < 0)    return 'border-amber-500/40 bg-amber-500/10 text-amber-300';
+        return 'border-accent-700/40 bg-accent-700/10 text-accent-500';
+      },
+      deltaLabel() {
+        if (!this.baseline || !this.report) return '';
+        const d = (this.report.pass_rate - this.baseline.pass_rate) * 100;
+        const sign = d >= 0 ? '+' : '';
+        if (d < -2) return `REGRESSION — ${sign}${d.toFixed(1)}pp below baseline.`;
+        if (d < 0) return `Below baseline by ${Math.abs(d).toFixed(1)}pp (within tolerance).`;
+        return `At or above baseline (${sign}${d.toFixed(1)}pp).`;
+      },
+      async run() {
+        this.running = true; this.report = null; this.progress = 5;
+        const tick = setInterval(() => { if (this.progress < 90) this.progress += 4; }, 200);
+        try {
+          const res = await fetch('/api/evals/run', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ backend: this.backend, tags: this.tags.length ? this.tags : null }),
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          this.report = await res.json();
+          const blob = new Blob([JSON.stringify(this.report, null, 2)], { type: 'application/json' });
+          this.downloadUrl = URL.createObjectURL(blob);
+        } catch (e) { alert('Eval run failed: ' + e.message); }
+        finally { clearInterval(tick); this.progress = 100; this.running = false; }
+      },
+    };
+  }
+</script>
+{% endblock %}

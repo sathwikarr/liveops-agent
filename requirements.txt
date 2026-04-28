@@ -84,3 +84,8 @@ psycopg2-binary>=2.9.0
 boto3>=1.28.0
 gspread>=6.0.0
 google-auth>=2.20.0
+# Web (FastAPI replaces Streamlit as the user-facing surface)
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.9
+itsdangerous>=2.1.2
