@@ -18,6 +18,7 @@ from analyst.agent import Plan, PlanStep
 from analyst.evals import (
     ALL_CASES, EvalCase, CaseResult, EvalReport, load_cases,
     run_eval, run_all, score_case,
+    HOLDOUT_CASES, load_holdout_cases,
 )
 
 
@@ -274,4 +275,62 @@ def test_baseline_file_is_consistent_with_corpus():
         f"Baseline has {base['n_cases']} cases but corpus has "
         f"{len(ALL_CASES)}. Re-run `python -m analyst.evals --json "
         f"tests/fixtures/eval_baseline.json` to refresh."
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Held-out corpus — paraphrases the heuristic was NOT tuned on.
+# This is the honest generalization signal.
+# --------------------------------------------------------------------------- #
+
+def test_holdout_corpus_only_uses_real_tools():
+    from analyst.agent import TOOLS
+    real = set(TOOLS.keys())
+    for c in HOLDOUT_CASES:
+        for t in c.expected_tools:
+            assert t in real, f"Holdout case {c.id}: unknown tool {t!r}"
+
+
+def test_holdout_corpus_ids_unique_and_disjoint_from_main():
+    ho_ids = [c.id for c in HOLDOUT_CASES]
+    assert len(ho_ids) == len(set(ho_ids)), "Duplicate ids in holdout"
+    assert not (set(ho_ids) & {c.id for c in ALL_CASES}), (
+        "Holdout ids must not overlap with the main corpus"
+    )
+
+
+def test_load_holdout_cases_filter_by_tag():
+    schema = load_holdout_cases(tags=["schema"])
+    assert all("schema" in c.tags for c in schema)
+
+
+def test_holdout_baseline_file_is_consistent_with_corpus():
+    baseline_path = REPO_ROOT / "tests" / "fixtures" / "eval_holdout_baseline_heuristic.json"
+    if not baseline_path.exists():
+        pytest.skip("No holdout baseline pinned yet")
+    base = json.loads(baseline_path.read_text())
+    assert base["n_cases"] == len(HOLDOUT_CASES), (
+        f"Holdout baseline has {base['n_cases']} cases but corpus has "
+        f"{len(HOLDOUT_CASES)}. Re-run `python -m analyst.evals --holdout "
+        f"--json tests/fixtures/eval_holdout_baseline_heuristic.json`."
+    )
+
+
+def test_heuristic_backend_holdout_no_regression(sample_df):
+    """Honest signal: paraphrases the heuristic was NOT tuned on.
+    The pinned heuristic-on-holdout pass_rate is intentionally LOW (the regex
+    only catches phrasings it was written for). This test guards against
+    *silent regression* — if the pass rate drops below the pinned floor,
+    something broke in the heuristic. It does NOT assert a high pass rate;
+    that's the LLM backend's job."""
+    baseline_path = REPO_ROOT / "tests" / "fixtures" / "eval_holdout_baseline_heuristic.json"
+    if not baseline_path.exists():
+        pytest.skip("No holdout baseline pinned yet")
+    base = json.loads(baseline_path.read_text())
+    pinned = float(base["pass_rate"])
+    report = run_all(HOLDOUT_CASES, sample_df, backend="heuristic")
+    # Allow a 2pp regression window, same convention as the main baseline.
+    assert report.pass_rate >= pinned - 0.02, (
+        f"Heuristic holdout pass_rate dropped to {report.pass_rate:.2%}, "
+        f"below pinned floor {pinned:.2%} - 2pp."
     )

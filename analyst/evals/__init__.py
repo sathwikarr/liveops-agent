@@ -20,8 +20,11 @@ from analyst.evals.scorer import (
 )
 from analyst.evals.runner import run_eval, run_all
 from analyst.evals.cases import load_cases, ALL_CASES
+from analyst.evals.holdout_cases import HOLDOUT_CASES, load_holdout_cases
 
 __all__ = [
     "EvalCase", "CaseResult", "EvalReport", "score_case",
-    "run_eval", "run_all", "load_cases", "ALL_CASES",
+    "run_eval", "run_all",
+    "load_cases", "ALL_CASES",
+    "load_holdout_cases", "HOLDOUT_CASES",
 ]

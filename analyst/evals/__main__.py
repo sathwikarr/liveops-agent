@@ -20,7 +20,9 @@ from typing import List
 
 import pandas as pd
 
-from analyst.evals import ALL_CASES, EvalReport, load_cases, run_all
+from analyst.evals import (
+    ALL_CASES, EvalReport, load_cases, load_holdout_cases, run_all,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -63,6 +65,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--quiet", action="store_true", help="Suppress per-case logs.",
+    )
+    p.add_argument(
+        "--holdout", action="store_true",
+        help=("Use the held-out corpus (paraphrases the heuristic was NOT "
+              "tuned on). The honest generalization signal."),
     )
     return p
 
@@ -120,11 +127,16 @@ def main(argv: list[str] | None = None) -> int:
     df = pd.read_csv(args.data) if args.data.suffix == ".csv" else pd.read_parquet(args.data)
     print(f"loaded {len(df):,} rows from {args.data.name}")
 
-    cases = load_cases(tags=args.tag, ids=args.id)
+    if args.holdout:
+        cases = load_holdout_cases(tags=args.tag, ids=args.id)
+        corpus_label = "held-out"
+    else:
+        cases = load_cases(tags=args.tag, ids=args.id)
+        corpus_label = "main"
     if not cases:
         print("error: no cases matched the filters", file=sys.stderr)
         return 1
-    print(f"running {len(cases)} cases on backend={args.backend}")
+    print(f"running {len(cases)} {corpus_label} cases on backend={args.backend}")
 
     report = run_all(cases, df, backend=args.backend)
     _print_report(report, quiet=args.quiet)

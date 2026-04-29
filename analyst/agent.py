@@ -313,15 +313,31 @@ def _llm_available() -> bool:
         return False
 
 
+_LLM_DEBUG = os.getenv("LIVEOPS_LLM_DEBUG", "").strip() in ("1", "true", "yes")
+
+
+def _llm_warn(msg: str) -> None:
+    """One-line stderr log when the LLM planner falls back. Off by default;
+    enable with LIVEOPS_LLM_DEBUG=1 for diagnosing 'why is llm == heuristic'."""
+    if _LLM_DEBUG:
+        import sys
+        print(f"[llm-fallback] {msg}", file=sys.stderr)
+
+
 def _llm_plan(question: str, role_map: Dict[str, str],
               schema_summary: List[Dict[str, Any]]) -> Optional[Plan]:
     """Ask Gemini to pick tools. Returns None on any failure so caller falls
-    back to the heuristic planner — never raises."""
+    back to the heuristic planner — never raises.
+
+    Set LIVEOPS_LLM_DEBUG=1 to see one-line stderr diagnostics on each
+    fallback (network errors, malformed JSON, etc.)."""
     try:
         from agent.explain import _CLIENT, _get_model_name  # type: ignore
-    except Exception:
+    except Exception as e:
+        _llm_warn(f"import agent.explain failed: {type(e).__name__}: {e}")
         return None
     if _CLIENT is None:
+        _llm_warn("agent.explain._CLIENT is None (no GEMINI_API_KEY?)")
         return None
 
     tool_catalog = [t.to_dict() for t in TOOLS.values()]
@@ -358,11 +374,13 @@ def _llm_plan(question: str, role_map: Dict[str, str],
                           why=str(s.get("why", "")))
                  for s in data.get("steps", []) if s.get("tool") in TOOLS]
         if not steps:
+            _llm_warn(f"LLM returned no usable steps for {question!r}")
             return None
         return Plan(steps=steps[:3],
                     reasoning=str(data.get("reasoning", "")),
                     backend="llm")
-    except Exception:
+    except Exception as e:
+        _llm_warn(f"LLM call failed for {question!r}: {type(e).__name__}: {e}")
         return None
 
 
