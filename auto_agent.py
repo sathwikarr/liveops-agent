@@ -1,7 +1,7 @@
 """LiveOps autonomous loop.
 
 Polls every N seconds and runs the pipeline for every user that has uploaded
-a CSV under user_data/. Designed to run alongside the Streamlit app:
+a CSV under user_data/. Designed to run alongside the FastAPI website:
 
     python auto_agent.py                # default 30s interval
     python auto_agent.py --interval 10  # poll every 10s
@@ -29,7 +29,7 @@ if str(REPO_ROOT) not in sys.path:
 load_dotenv(find_dotenv(), override=False)
 
 from agent import db  # noqa: E402
-from pages.run_agent import run_pipeline  # noqa: E402
+from agent.pipeline import run_pipeline  # noqa: E402
 
 USER_DATA = REPO_ROOT / "user_data"
 

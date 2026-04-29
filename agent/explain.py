@@ -23,14 +23,6 @@ from dotenv import find_dotenv, load_dotenv
 
 from agent.utils import with_backoff
 
-# Optional Streamlit (for secrets + quiet warnings)
-try:
-    import streamlit as st  # type: ignore
-    HAS_STREAMLIT = True
-except Exception:
-    st = None  # type: ignore
-    HAS_STREAMLIT = False
-
 # New SDK
 try:
     from google import genai  # type: ignore
@@ -71,25 +63,10 @@ _RESPONSE_SCHEMA = {
 
 def _get_api_key() -> Optional[str]:
     load_dotenv(find_dotenv(), override=False)
-    key = os.getenv("GEMINI_API_KEY")
-    if key:
-        return key
-    if HAS_STREAMLIT:
-        try:
-            return st.secrets["GEMINI_API_KEY"]  # type: ignore[attr-defined]
-        except Exception:
-            pass
-    return None
+    return os.getenv("GEMINI_API_KEY") or None
 
 
 def _get_model_name() -> str:
-    if HAS_STREAMLIT:
-        try:
-            m = st.secrets["GEMINI_MODEL"]  # type: ignore[attr-defined]
-            if m:
-                return str(m).strip()
-        except Exception:
-            pass
     return os.getenv("GEMINI_MODEL", DEFAULT_MODEL).strip()
 
 
@@ -98,12 +75,7 @@ _CLIENT = None
 if HAS_GENAI and _API_KEY:
     try:
         _CLIENT = genai.Client(api_key=_API_KEY)
-    except Exception as e:
-        if HAS_STREAMLIT:
-            try:
-                st.warning(f"⚠️ Could not init Gemini client: {e}")
-            except Exception:
-                pass
+    except Exception:
         _CLIENT = None
 
 
@@ -186,12 +158,7 @@ Return JSON matching the schema with a 1-sentence root cause, a severity
         # Validate it parses; otherwise fall back
         json.loads(text)
         return text
-    except Exception as e:
-        if HAS_STREAMLIT:
-            try:
-                st.warning(f"⚠️ Gemini error: {str(e)[:180]}… — using fallback.")
-            except Exception:
-                pass
+    except Exception:
         return json.dumps(_fallback_struct(region, product_id, revenue))
 
 
