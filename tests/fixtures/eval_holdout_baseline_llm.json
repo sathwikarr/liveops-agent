@@ -1,0 +1,433 @@
+{
+  "backend": "llm",
+  "n_cases": 14,
+  "n_passed": 4,
+  "n_failed": 10,
+  "mean_tool_match": 0.2857,
+  "mean_args_match": 1.0,
+  "mean_no_forbidden": 1.0,
+  "mean_success_match": 0.2857,
+  "mean_overall": 0.6429,
+  "pass_rate": 0.2857,
+  "per_tool": {
+    "revenue_by_period": {
+      "n": 2.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "top_products": {
+      "n": 2.0,
+      "pass_rate": 0.5,
+      "mean_overall": 0.75
+    },
+    "top_customers": {
+      "n": 2.0,
+      "pass_rate": 0.0,
+      "mean_overall": 0.5
+    },
+    "segment_customers": {
+      "n": 2.0,
+      "pass_rate": 0.0,
+      "mean_overall": 0.5
+    },
+    "product_quadrants": {
+      "n": 1.0,
+      "pass_rate": 0.0,
+      "mean_overall": 0.5
+    },
+    "co_purchases": {
+      "n": 1.0,
+      "pass_rate": 0.0,
+      "mean_overall": 0.5
+    },
+    "price_elasticity": {
+      "n": 1.0,
+      "pass_rate": 0.0,
+      "mean_overall": 0.5
+    },
+    "churn_risk": {
+      "n": 1.0,
+      "pass_rate": 0.0,
+      "mean_overall": 0.5
+    },
+    "cohort_retention": {
+      "n": 1.0,
+      "pass_rate": 0.0,
+      "mean_overall": 0.5
+    },
+    "describe_columns": {
+      "n": 1.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    }
+  },
+  "per_tag": {
+    "holdout": {
+      "n": 14.0,
+      "pass_rate": 0.2857,
+      "mean_overall": 0.6429
+    },
+    "revenue": {
+      "n": 2.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "paraphrase": {
+      "n": 9.0,
+      "pass_rate": 0.3333,
+      "mean_overall": 0.6667
+    },
+    "args": {
+      "n": 1.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "products": {
+      "n": 2.0,
+      "pass_rate": 0.5,
+      "mean_overall": 0.75
+    },
+    "idiom": {
+      "n": 5.0,
+      "pass_rate": 0.2,
+      "mean_overall": 0.6
+    },
+    "customers": {
+      "n": 2.0,
+      "pass_rate": 0.0,
+      "mean_overall": 0.5
+    },
+    "segments": {
+      "n": 2.0,
+      "pass_rate": 0.0,
+      "mean_overall": 0.5
+    },
+    "quadrants": {
+      "n": 1.0,
+      "pass_rate": 0.0,
+      "mean_overall": 0.5
+    },
+    "basket": {
+      "n": 1.0,
+      "pass_rate": 0.0,
+      "mean_overall": 0.5
+    },
+    "pricing": {
+      "n": 1.0,
+      "pass_rate": 0.0,
+      "mean_overall": 0.5
+    },
+    "retention": {
+      "n": 2.0,
+      "pass_rate": 0.0,
+      "mean_overall": 0.5
+    },
+    "schema": {
+      "n": 1.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    }
+  },
+  "cases": [
+    {
+      "case_id": "ho-rev-001",
+      "question": "How much money are we pulling in each week?",
+      "backend": "llm",
+      "planned_tools": [
+        "revenue_by_period"
+      ],
+      "planned_args": {
+        "revenue_by_period": {
+          "freq": "W"
+        }
+      },
+      "answer": "For the week ending April 26, 2026, weekly revenue was $34,218.07. This represents a slight decrease from the previous week's revenue of $34,502.54. The rolling four-week average revenue as of April 26, 2026, is $31,213.38.",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "ho-rev-002",
+      "question": "What's the income picture month by month?",
+      "backend": "llm",
+      "planned_tools": [
+        "revenue_by_period"
+      ],
+      "planned_args": {
+        "revenue_by_period": {
+          "freq": "M"
+        }
+      },
+      "answer": "Monthly revenue shows a strong upward trend, increasing from $3,519.21 in November 2024 to a peak of $158,348.99 in March 2026. While growth was significant in early periods, such as a 187.9% increase in March 2025, there was a 25.4% decline in April 2026. The latest recorded revenue for April 2026 stands at $118,176.33.",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "ho-topp-001",
+      "question": "Which items are flying off the shelves?",
+      "backend": "llm",
+      "planned_tools": [
+        "top_products"
+      ],
+      "planned_args": {
+        "top_products": {}
+      },
+      "answer": "Products P1022, P1017, and P1029 are currently the top-selling items. P1022 leads with a revenue of $77,942.27, followed by P1017 at $76,440.79. P1029 is also performing exceptionally well, generating $75,670.42 in revenue.",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "ho-topp-002",
+      "question": "Show me my heaviest hitters in the catalog.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *Show me my heaviest hitters in the catalog.*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 0.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 0.0,
+      "overall": 0.5,
+      "passed": false,
+      "failed_reasons": [
+        "tool_match 0.00 < 0.5: expected ['top_products'], planned ['describe_columns']",
+        "success_match 0.00 < 0.5"
+      ]
+    },
+    {
+      "case_id": "ho-topc-001",
+      "question": "Who's on our VIP list?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *Who's on our VIP list?*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 0.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 0.0,
+      "overall": 0.5,
+      "passed": false,
+      "failed_reasons": [
+        "tool_match 0.00 < 0.5: expected ['top_customers'], planned ['describe_columns']",
+        "success_match 0.00 < 0.5"
+      ]
+    },
+    {
+      "case_id": "ho-topc-002",
+      "question": "Identify my whales.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *Identify my whales.*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 0.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 0.0,
+      "overall": 0.5,
+      "passed": false,
+      "failed_reasons": [
+        "tool_match 0.00 < 0.5: expected ['top_customers'], planned ['describe_columns']",
+        "success_match 0.00 < 0.5"
+      ]
+    },
+    {
+      "case_id": "ho-seg-001",
+      "question": "Bucket my buyers into groups based on behavior.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *Bucket my buyers into groups based on behavior.*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 0.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 0.0,
+      "overall": 0.5,
+      "passed": false,
+      "failed_reasons": [
+        "tool_match 0.00 < 0.5: expected ['segment_customers'], planned ['describe_columns']",
+        "success_match 0.00 < 0.5"
+      ]
+    },
+    {
+      "case_id": "ho-seg-002",
+      "question": "Cluster the customer base.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *Cluster the customer base.*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 0.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 0.0,
+      "overall": 0.5,
+      "passed": false,
+      "failed_reasons": [
+        "tool_match 0.00 < 0.5: expected ['segment_customers'], planned ['describe_columns']",
+        "success_match 0.00 < 0.5"
+      ]
+    },
+    {
+      "case_id": "ho-quad-001",
+      "question": "Which products are winners and which are losers?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *Which products are winners and which are losers?*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 0.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 0.0,
+      "overall": 0.5,
+      "passed": false,
+      "failed_reasons": [
+        "tool_match 0.00 < 0.5: expected ['product_quadrants'], planned ['describe_columns']",
+        "success_match 0.00 < 0.5"
+      ]
+    },
+    {
+      "case_id": "ho-co-001",
+      "question": "What products get bought together?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *What products get bought together?*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 0.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 0.0,
+      "overall": 0.5,
+      "passed": false,
+      "failed_reasons": [
+        "tool_match 0.00 < 0.5: expected ['co_purchases'], planned ['describe_columns']",
+        "success_match 0.00 < 0.5"
+      ]
+    },
+    {
+      "case_id": "ho-elas-001",
+      "question": "If I bump prices 10% what happens to volume?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *If I bump prices 10% what happens to volume?*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 0.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 0.0,
+      "overall": 0.5,
+      "passed": false,
+      "failed_reasons": [
+        "tool_match 0.00 < 0.5: expected ['price_elasticity'], planned ['describe_columns']",
+        "success_match 0.00 < 0.5"
+      ]
+    },
+    {
+      "case_id": "ho-churn-001",
+      "question": "Who's gone quiet on us recently?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *Who's gone quiet on us recently?*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 0.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 0.0,
+      "overall": 0.5,
+      "passed": false,
+      "failed_reasons": [
+        "tool_match 0.00 < 0.5: expected ['churn_risk'], planned ['describe_columns']",
+        "success_match 0.00 < 0.5"
+      ]
+    },
+    {
+      "case_id": "ho-coh-001",
+      "question": "Of the folks who signed up in January, how many are still around?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *Of the folks who signed up in January, how many are still around?*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 0.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 0.0,
+      "overall": 0.5,
+      "passed": false,
+      "failed_reasons": [
+        "tool_match 0.00 < 0.5: expected ['cohort_retention'], planned ['describe_columns']",
+        "success_match 0.00 < 0.5"
+      ]
+    },
+    {
+      "case_id": "ho-desc-001",
+      "question": "What fields are available in this dataset?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *What fields are available in this dataset?*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    }
+  ]
+}
