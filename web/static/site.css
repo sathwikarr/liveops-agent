@@ -82,7 +82,7 @@ code:not(pre code) {
 .hero-enter > *:nth-child(4) { animation-delay: 300ms; }
 .hero-enter > *:nth-child(5) { animation-delay: 400ms; }
 
-/* ---- Animated gradient blobs in hero background ---- */
+/* ---- Hero halo (kept low-key) ---- */
 .bg-blobs {
   position: absolute;
   inset: 0;
@@ -94,36 +94,41 @@ code:not(pre code) {
 .bg-blobs::after {
   content: "";
   position: absolute;
-  width: 60vw;
-  height: 60vw;
-  max-width: 720px;
-  max-height: 720px;
+  width: 50vw;
+  height: 50vw;
+  max-width: 540px;
+  max-height: 540px;
   border-radius: 9999px;
-  filter: blur(120px);
-  opacity: 0.35;
+  filter: blur(100px);
+  opacity: 0.20;
   will-change: transform;
 }
 .bg-blobs::before {
-  top: -10%;
-  left: -5%;
+  top: -15%;
+  left: -10%;
   background: radial-gradient(circle at 30% 30%, #10b981, transparent 60%);
-  animation: blob-float-a 18s ease-in-out infinite;
+  animation: blob-float-a 22s ease-in-out infinite;
 }
 .bg-blobs::after {
   top: -10%;
   right: -10%;
   background: radial-gradient(circle at 70% 30%, #6366f1, transparent 60%);
-  animation: blob-float-b 22s ease-in-out infinite;
+  animation: blob-float-b 26s ease-in-out infinite;
 }
 
-/* ---- Shimmering gradient text (used on the headline accent word) ---- */
+/* ---- Single-color emerald accent text (no animation, no rainbow) ---- */
 .text-shimmer {
-  background: linear-gradient(90deg, #10b981 0%, #34d399 30%, #6ee7b7 50%, #34d399 70%, #10b981 100%);
-  background-size: 200% 100%;
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: shimmer 6s ease-in-out infinite;
+}
+/* Backwards-compat alias for the rainbow .gradient-text used in some templates */
+.gradient-text {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* ---- Pulsing live-status dot ---- */
@@ -146,18 +151,19 @@ code:not(pre code) {
 
 /* ---- Card hover lift ---- */
 .lift {
-  transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1),
-              border-color 250ms ease,
-              box-shadow 250ms ease,
-              background-color 250ms ease;
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 200ms ease,
+              box-shadow 200ms ease,
+              background-color 200ms ease;
   will-change: transform;
 }
 .lift:hover {
-  transform: translate3d(0, -3px, 0);
-  box-shadow: 0 12px 30px -12px rgba(16, 185, 129, 0.25);
+  transform: translate3d(0, -1px, 0);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px -16px rgba(16, 185, 129, 0.25);
 }
 
-/* ---- Conic gradient border on hover (for CTA cards) ---- */
+/* ---- Subtle accent ring on hover (no conic rainbow) ---- */
 .glow-border {
   position: relative;
   isolation: isolate;
@@ -168,11 +174,11 @@ code:not(pre code) {
   inset: -1px;
   z-index: -1;
   border-radius: inherit;
-  background: conic-gradient(from 90deg at 50% 50%, transparent 0deg, #10b981 90deg, transparent 180deg, #6366f1 270deg, transparent 360deg);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.45), rgba(99, 102, 241, 0.25));
   opacity: 0;
-  transition: opacity 350ms ease;
+  transition: opacity 280ms ease;
 }
-.glow-border:hover::before { opacity: 0.55; }
+.glow-border:hover::before { opacity: 0.35; }
 
 /* ---- Typewriter cursor for code preview ---- */
 .cursor-blink::after {
@@ -199,148 +205,117 @@ code:not(pre code) {
 main { animation: fade-in 400ms ease-out; }
 
 /* ========================================================================= *
- * Toy world — floating animated SVG figures + mesh background + glass cards
+ * Premium dark mode — restrained aurora background, faint grid, glass cards.
+ * Color discipline: emerald accent, subtle indigo, plenty of slate/ink negative
+ * space. No rainbow gradients, no rotating shapes, no playful bouncing.
  * ========================================================================= */
 
-/* ---- Animated mesh-gradient background.
-   A few large blurred radial gradients drifting on a long loop give the page
-   a sense of depth without paying for a real WebGL background. ---- */
-@keyframes mesh-drift {
-  0%   { background-position:   0%   0%, 100%   0%,  50% 100%,   0% 100%, 100% 100%; }
-  50%  { background-position:  20%  30%,  80%  20%,  40%  60%,  10%  70%,  90%  60%; }
-  100% { background-position:   0%   0%, 100%   0%,  50% 100%,   0% 100%, 100% 100%; }
+/* ---- Aurora background ---- */
+@keyframes aurora-drift {
+  0%, 100% { transform: translate3d(0,    0,    0) scale(1);    opacity: 0.55; }
+  50%      { transform: translate3d(2%, -1.5%, 0) scale(1.04); opacity: 0.8;  }
 }
-.bg-mesh {
-  background-color: #070713;
+.bg-aurora {
+  background-color: #0a0b10;
   background-image:
-    radial-gradient(45rem 35rem at 12% 18%, rgba(168,  85, 247, 0.25), transparent 60%),
-    radial-gradient(40rem 30rem at 88% 12%, rgba( 34, 211, 238, 0.22), transparent 60%),
-    radial-gradient(50rem 40rem at 50% 92%, rgba( 16, 185, 129, 0.22), transparent 60%),
-    radial-gradient(38rem 28rem at  4% 78%, rgba(244,  63,  94, 0.18), transparent 60%),
-    radial-gradient(34rem 26rem at 96% 70%, rgba(251, 191,  36, 0.16), transparent 60%);
-  background-size: 200% 200%, 200% 200%, 200% 200%, 200% 200%, 200% 200%;
-  animation: mesh-drift 28s ease-in-out infinite;
-}
-.bg-mesh::after {
-  /* Faint dotted grid, on top, for "engineered" texture */
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    radial-gradient(60rem 36rem at 18% -10%, rgba( 16, 185, 129, 0.20), transparent 60%),
+    radial-gradient(55rem 34rem at 95% 35%, rgba(  99, 102, 241, 0.16), transparent 60%),
+    radial-gradient(50rem 32rem at 50% 110%, rgba( 16, 185, 129, 0.10), transparent 65%);
   pointer-events: none;
 }
 
-/* ---- Glass card utility (used everywhere now) ---- */
+/* ---- Faint dot grid, with vignette mask ---- */
+.bg-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: 0 0;
+  mask-image:           radial-gradient(ellipse 120% 80% at 50% 0%, #000 35%, transparent 80%);
+  -webkit-mask-image:   radial-gradient(ellipse 120% 80% at 50% 0%, #000 35%, transparent 80%);
+  pointer-events: none;
+}
+
+/* ---- Drifting orbs (the only "moving" element) ---- */
+.orb {
+  position: absolute;
+  display: block;
+  width: 38rem;
+  height: 38rem;
+  border-radius: 9999px;
+  filter: blur(110px);
+  will-change: transform, opacity;
+  transform: translate3d(0, var(--py, 0px), 0);
+  animation: aurora-drift 22s ease-in-out infinite;
+}
+.orb-emerald { background: radial-gradient(circle, rgba( 16, 185, 129, 0.30), transparent 60%); animation-duration: 26s; }
+.orb-indigo  { background: radial-gradient(circle, rgba( 99, 102, 241, 0.22), transparent 60%); animation-duration: 32s; }
+.orb-slate   { background: radial-gradient(circle, rgba(148, 163, 184, 0.10), transparent 60%); animation-duration: 38s; }
+
+/* ---- Glass card utilities ---- */
 .glass {
-  background-color: rgba(15, 15, 35, 0.55);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(16, 19, 26, 0.62);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 18px 50px -20px rgba(0, 0, 0, 0.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 12px 40px -16px rgba(0, 0, 0, 0.6);
 }
 .glass-strong {
-  background-color: rgba(15, 15, 35, 0.72);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  background-color: rgba(16, 19, 26, 0.78);
+  backdrop-filter: blur(18px) saturate(130%);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* ---- Toy stage: each <svg.toy> reads --py from the parallax JS,
-       then layers an animation on top. We separate translate (parallax)
-       from animation (bob/spin) so they don't fight. ---- */
-.toy {
-  position: absolute;
-  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45));
-  will-change: transform;
-  transform: translate3d(0, var(--py, 0px), 0);
-  transition: filter 250ms ease;
-}
-.toy > * { transform-box: fill-box; transform-origin: center; }
-
-@keyframes toy-bob {
-  0%, 100% { translate: 0 0;    rotate: -3deg; }
-  50%      { translate: 0 -10px; rotate:  3deg; }
-}
-@keyframes toy-bob-slow {
-  0%, 100% { translate: 0 0;    rotate:  2deg; }
-  50%      { translate: 0 -14px; rotate: -4deg; }
-}
-@keyframes toy-spin {
-  from { rotate:   0deg; }
-  to   { rotate: 360deg; }
-}
-@keyframes toy-spin-slow {
-  from { rotate:   0deg; }
-  to   { rotate: 360deg; }
-}
-@keyframes toy-spin-rev {
-  from { rotate:   0deg; }
-  to   { rotate: -360deg; }
+/* ---- Hairline divider (used between sections) ---- */
+.hairline {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* The animations target the SVG itself; CSS individual transform
-   props (translate / rotate) compose with the parent's translate3d
-   via parallax, so toys bob *and* parallax at the same time. */
-.toy.toy-bob       { animation: toy-bob       6s  ease-in-out infinite; }
-.toy.toy-bob-slow  { animation: toy-bob-slow  9s  ease-in-out infinite; }
-.toy.toy-spin      { animation: toy-spin      14s linear      infinite; }
-.toy.toy-spin-slow { animation: toy-spin-slow 22s linear      infinite; }
-.toy.toy-spin-rev  { animation: toy-spin-rev  18s linear      infinite; }
-
-/* Cursor halo: a soft glow that follows the mouse on the hero */
-#cursor-halo {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 400px;
-  height: 400px;
-  border-radius: 9999px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.18), rgba(34, 211, 238, 0.08) 40%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-  filter: blur(8px);
-  will-change: transform;
-}
-
-/* Tilt cards need 3D perspective on a parent; we set it on the card itself */
-[data-tilt] {
-  transform-style: preserve-3d;
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
-}
-
-/* Gradient text utility — used on hero headline accent */
-.gradient-text {
-  background: linear-gradient(120deg, #34d399 0%, #22d3ee 35%, #a855f7 70%, #f43f5e 100%);
-  background-size: 200% 100%;
+/* ---- Subtle accent text — emerald only, no shimmer ---- */
+.accent-text {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
   -webkit-background-clip: text;
-  background-clip: text;
+          background-clip: text;
   color: transparent;
-  animation: shimmer 8s ease-in-out infinite;
 }
 
-/* Premium chip used in headers */
+/* ---- Section eyebrow ---- */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.eyebrow::before {
+  content: "";
+  width: 1.25rem;
+  height: 1px;
+  background: rgba(148, 163, 184, 0.45);
+  display: inline-block;
+}
+
+/* ---- Tag pill (replaces the playful "chip") ---- */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.3rem 0.75rem;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  padding: 0.25rem 0.65rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
   color: #cbd5e1;
 }
 
 /* ========================================================================= *
- * Reduced motion — honor it. All animations become instant, no movement.
+ * Reduced motion — honor it.
  * ========================================================================= */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -351,7 +326,5 @@ main { animation: fade-in 400ms ease-out; }
   .reveal { opacity: 1; transform: none; }
   .lift:hover { transform: none; }
   main { animation: none; }
-  .toy { transform: translate3d(0, var(--py, 0px), 0) !important; }
-  .bg-mesh { animation: none; }
-  #cursor-halo { display: none; }
+  .orb { animation: none; }
 }

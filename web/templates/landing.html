@@ -3,59 +3,64 @@
 {% block title %}LiveOps Agent — AI co-pilot for retail ops{% endblock %}
 
 {% block content %}
-<!-- Cursor halo (only attaches on fine pointers; CSS hides it on touch) -->
-<div id="cursor-halo" aria-hidden="true"></div>
+<!-- ============================================================ -->
+<!-- HERO                                                          -->
+<!-- ============================================================ -->
+<section class="relative pt-6">
+  <div class="bg-blobs" aria-hidden="true"></div>
 
-<!-- ============================================================ -->
-<!-- HERO  ·  glass card on mesh + cursor halo + staggered entrance -->
-<!-- ============================================================ -->
-<section class="relative">
-  <div class="relative grid items-center gap-10 md:grid-cols-5">
+  <div class="relative grid items-center gap-12 md:grid-cols-5">
     <div class="md:col-span-3 hero-enter">
-      <span class="chip">
-        <span class="live-dot" aria-hidden="true"></span>
-        v0.4 · 268 tests passing · 55-case eval baseline
-      </span>
-      <h1 class="mt-5 font-display text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">
-        An AI agent that
-        <span class="gradient-text">does the boring ops work</span>
-        for retail teams.
+      <span class="eyebrow">v0.4 · 268 tests passing</span>
+
+      <h1 class="mt-5 font-display text-4xl font-semibold leading-[1.08] tracking-tight md:text-[3.25rem]">
+        An AI co-pilot for the
+        <span class="accent-text">boring ops work</span>
+        in retail teams.
       </h1>
-      <p class="mt-6 max-w-xl text-lg leading-relaxed text-slate-300">
-        Ingest your orders &amp; customer data, score churn &amp; demand, recommend next actions,
-        then send Slack/email/Sheets — all evaluated against a 55-case test corpus so the
-        agent doesn't drift silently.
+
+      <p class="mt-5 max-w-xl text-[15px] leading-relaxed text-slate-400">
+        Ingest orders &amp; customer data, score churn and demand, recommend the next action,
+        and dispatch to Slack, email, or Sheets — every plan graded against a 55-case eval corpus.
       </p>
-      <div class="mt-8 flex flex-wrap gap-3">
+
+      <div class="mt-8 flex flex-wrap items-center gap-3">
         <a href="/demo"
-           class="lift glow-border rounded-2xl bg-gradient-to-r from-accent-500 via-cyan2-500 to-grape-500 px-6 py-3 font-semibold text-white shadow-lg shadow-accent-500/30 transition">
-          ▶ Try the demo
+           class="inline-flex items-center gap-2 rounded-md bg-accent-500 px-4 py-2.5 text-sm font-medium text-ink-950 shadow-sm transition hover:bg-accent-400">
+          Try the demo
+          <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
         </a>
         <a href="/workbench"
-           class="lift glass rounded-2xl px-6 py-3 font-medium text-slate-200 transition hover:text-white">
+           class="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-white/20 hover:bg-white/[0.06]">
           Open workbench
         </a>
-        <a href="/evals"
-           class="lift glass rounded-2xl px-6 py-3 font-medium text-slate-200 transition hover:text-white">
+        <a href="/evals" class="text-sm text-slate-400 underline-offset-4 hover:text-white hover:underline">
           See eval results →
         </a>
       </div>
-      <p class="mt-4 text-xs text-slate-500">No signup required to demo · ~5 sec to first answer</p>
+
+      <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500">
+        <span class="inline-flex items-center gap-1.5"><span class="live-dot" aria-hidden="true"></span> live demo · ~5s response</span>
+        <span>·</span>
+        <span>Heuristic + Gemini backends</span>
+        <span>·</span>
+        <span>CI-pinned baseline</span>
+      </div>
     </div>
 
     <div class="md:col-span-2 hero-enter">
-      <div class="glass relative rounded-4xl p-2 shadow-2xl" data-tilt>
-        <div class="flex items-center gap-1.5 px-4 py-3">
-          <span class="h-2.5 w-2.5 rounded-full bg-rose2-500/80"></span>
-          <span class="h-2.5 w-2.5 rounded-full bg-sun-400/80"></span>
-          <span class="h-2.5 w-2.5 rounded-full bg-accent-500/80"></span>
+      <div class="glass relative overflow-hidden rounded-xl">
+        <div class="flex items-center gap-1.5 border-b border-white/5 px-4 py-3">
+          <span class="h-2.5 w-2.5 rounded-full bg-rose2-500/70"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-amber-400/70"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-accent-500/70"></span>
           <span class="ml-3 font-mono text-xs text-slate-500">$ liveops ask</span>
         </div>
-        <pre class="m-0 overflow-x-auto rounded-3xl bg-ink-950/80 p-5 font-mono text-xs leading-relaxed text-slate-300"><span class="text-slate-500">›</span> which 5 products bring in the most revenue?
+        <pre class="m-0 overflow-x-auto p-5 font-mono text-xs leading-relaxed text-slate-300"><span class="text-slate-500">›</span> which 5 products bring in the most revenue?
 
-<span class="text-accent-500">plan</span>:  top_products(n=5)
-<span class="text-accent-500">trace</span>: top_products → 5 rows in 0.04s
-<span class="text-accent-500">answer</span>:
+<span class="text-accent-400">plan</span>:  top_products(n=5)
+<span class="text-accent-400">trace</span>: top_products → 5 rows in 0.04s
+<span class="text-accent-400">answer</span>:
   · SKU-247  $182,431
   · SKU-019  $151,902
   · SKU-118  $138,544
@@ -64,70 +69,76 @@
 
 <span class="text-slate-500">›</span> which customers are about to churn?
 
-<span class="text-accent-500">plan</span>:  churn_risk(days=60)
-<span class="text-accent-500">trace</span><span class="cursor-blink">: 1,204 customers · 18% At-Risk · 7% Churned</span></pre>
+<span class="text-accent-400">plan</span>:  churn_risk(days=60)
+<span class="text-accent-400">trace</span><span class="cursor-blink">: 1,204 customers · 18% At-Risk · 7% Churned</span></pre>
       </div>
     </div>
   </div>
 </section>
 
 <!-- ============================================================ -->
-<!-- HEADLINE NUMBERS  ·  count-up on scroll, glass cards          -->
+<!-- HEADLINE NUMBERS                                              -->
 <!-- ============================================================ -->
-<section class="mt-20 grid grid-cols-2 gap-4 md:grid-cols-4">
-  {% set stats = [
-    (268, 'tests passing', 'from-accent-500 to-cyan2-400'),
-    (10,  'analyst tools', 'from-cyan2-400 to-grape-500'),
-    (55,  'eval cases',    'from-grape-500 to-rose2-500'),
-    (4,   'data connectors','from-sun-400 to-rose2-500'),
-  ] %}
-  {% for v, lbl, grad in stats %}
-    <div class="reveal reveal-delay-{{ loop.index }} lift glass rounded-3xl p-6" data-tilt>
-      <div class="bg-gradient-to-br {{ grad }} bg-clip-text font-display text-4xl font-bold tracking-tight text-transparent"
-           data-countup="{{ v }}">{{ v }}</div>
-      <div class="mt-1 text-sm text-slate-400">{{ lbl }}</div>
-    </div>
-  {% endfor %}
+<section class="mt-24 hairline pt-12">
+  <div class="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] md:grid-cols-4">
+    {% set stats = [
+      (268, 'tests passing'),
+      (10,  'analyst tools'),
+      (55,  'eval cases'),
+      (4,   'data connectors'),
+    ] %}
+    {% for v, lbl in stats %}
+      <div class="reveal reveal-delay-{{ loop.index }} bg-ink-900/60 p-6">
+        <div class="font-display text-3xl font-semibold tracking-tight" data-countup="{{ v }}">{{ v }}</div>
+        <div class="mt-1 text-xs uppercase tracking-widest text-slate-500">{{ lbl }}</div>
+      </div>
+    {% endfor %}
+  </div>
 </section>
 
 <!-- ============================================================ -->
 <!-- TWO-VERTICAL CAPABILITY STRIP                                 -->
 <!-- ============================================================ -->
-<section class="mt-24 grid gap-6 md:grid-cols-2">
-  <div class="reveal reveal-delay-1 lift glass rounded-4xl p-7" data-tilt>
-    <div class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-accent-500/20 to-cyan2-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent-500">
-      🤖 Ops agent
-    </div>
-    <h2 class="mt-3 font-display text-2xl font-bold">Detect → Recommend → Act</h2>
-    <p class="mt-3 text-sm leading-relaxed text-slate-300">
-      Watches your KPIs, flags incidents with anomaly + change-point detection,
-      and ships the right next step to Slack, email, or Sheets — with a Thompson
-      bandit learning from your feedback.
+<section class="mt-20">
+  <div class="reveal max-w-2xl">
+    <span class="eyebrow">capabilities</span>
+    <h2 class="mt-3 font-display text-3xl font-semibold tracking-tight">Detect, recommend, and ship — eval-graded.</h2>
+    <p class="mt-3 text-[15px] leading-relaxed text-slate-400">
+      Two product surfaces share a single tool registry. Both code paths are scored on the same 55-case corpus,
+      so improvements show up everywhere a tool is used.
     </p>
-    <ul class="mt-5 space-y-2 text-sm text-slate-300">
-      <li class="flex gap-2"><span class="text-accent-500">▸</span> Anomaly + drift detection per metric</li>
-      <li class="flex gap-2"><span class="text-cyan2-400">▸</span> Bandit-driven recommender across 5 action templates</li>
-      <li class="flex gap-2"><span class="text-grape-400">▸</span> Slack / email / Google-Sheets dispatch</li>
-      <li class="flex gap-2"><span class="text-rose2-400">▸</span> Bcrypt + Fernet encrypted credentials</li>
-    </ul>
   </div>
 
-  <div class="reveal reveal-delay-2 lift glass rounded-4xl p-7" data-tilt>
-    <div class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-grape-500/20 to-rose2-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-grape-400">
-      🧪 Analyst workbench
+  <div class="mt-10 grid gap-6 md:grid-cols-2">
+    <div class="reveal reveal-delay-1 lift glass rounded-xl p-7">
+      <div class="text-xs font-medium uppercase tracking-widest text-accent-400">Ops agent</div>
+      <h3 class="mt-2 font-display text-lg font-semibold">Detect → Recommend → Act</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-400">
+        Watches your KPIs, flags incidents with anomaly + change-point detection, and ships the right next step
+        to Slack, email, or Sheets. A Thompson bandit learns from your feedback.
+      </p>
+      <ul class="mt-5 space-y-2 text-sm text-slate-300">
+        <li class="flex gap-2"><span class="text-accent-500">·</span> Anomaly + drift detection per metric</li>
+        <li class="flex gap-2"><span class="text-accent-500">·</span> Bandit-driven recommender across 5 action templates</li>
+        <li class="flex gap-2"><span class="text-accent-500">·</span> Slack / email / Google-Sheets dispatch</li>
+        <li class="flex gap-2"><span class="text-accent-500">·</span> Bcrypt + Fernet encrypted credentials</li>
+      </ul>
     </div>
-    <h2 class="mt-3 font-display text-2xl font-bold">Ten tools, eval-graded</h2>
-    <p class="mt-3 text-sm leading-relaxed text-slate-300">
-      The agent picks tools to answer plain-English questions about your
-      orders &amp; customers. Plans are scored on tool-match, args-match,
-      forbidden-tool avoidance, and must-succeed execution.
-    </p>
-    <ul class="mt-5 space-y-2 text-sm text-slate-300">
-      <li class="flex gap-2"><span class="text-accent-500">▸</span> Revenue trends · top products · top customers</li>
-      <li class="flex gap-2"><span class="text-cyan2-400">▸</span> RFM segments · BCG quadrants · co-purchases</li>
-      <li class="flex gap-2"><span class="text-grape-400">▸</span> Price elasticity · churn risk · cohort retention</li>
-      <li class="flex gap-2"><span class="text-rose2-400">▸</span> Heuristic + Gemini backends, both eval-tested</li>
-    </ul>
+
+    <div class="reveal reveal-delay-2 lift glass rounded-xl p-7">
+      <div class="text-xs font-medium uppercase tracking-widest text-accent-400">Analyst workbench</div>
+      <h3 class="mt-2 font-display text-lg font-semibold">Ten tools, eval-graded</h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-400">
+        Plain-English questions over orders &amp; customers. Plans are scored on tool-match, args-match,
+        forbidden-tool avoidance, and must-succeed execution.
+      </p>
+      <ul class="mt-5 space-y-2 text-sm text-slate-300">
+        <li class="flex gap-2"><span class="text-accent-500">·</span> Revenue trends · top products · top customers</li>
+        <li class="flex gap-2"><span class="text-accent-500">·</span> RFM segments · BCG quadrants · co-purchases</li>
+        <li class="flex gap-2"><span class="text-accent-500">·</span> Price elasticity · churn risk · cohort retention</li>
+        <li class="flex gap-2"><span class="text-accent-500">·</span> Heuristic + Gemini backends, both eval-tested</li>
+      </ul>
+    </div>
   </div>
 </section>
 
@@ -135,45 +146,45 @@
 <!-- EVAL RIBBON                                                   -->
 <!-- ============================================================ -->
 <section class="reveal mt-20">
-  <div class="glass-strong relative overflow-hidden rounded-4xl p-10">
-    <!-- decorative gradient blob inside the ribbon -->
+  <div class="glass relative overflow-hidden rounded-xl p-10">
     <div aria-hidden="true"
-         class="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-gradient-to-br from-accent-500/30 via-cyan2-500/20 to-grape-500/30 blur-3xl"></div>
+         class="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-accent-500/10 blur-3xl"></div>
 
     <div class="relative flex flex-wrap items-center justify-between gap-8">
       <div class="max-w-xl">
-        <span class="chip">📊 Pinned baseline</span>
-        <h2 class="mt-3 font-display text-2xl font-bold">Eval harness keeps the agent honest</h2>
-        <p class="mt-3 text-sm leading-relaxed text-slate-300">
-          Every PR runs the agent against 55 questions on the heuristic backend. CI fails
-          on any &gt; 2pp regression. The numbers below are real, not aspirational.
+        <span class="eyebrow">pinned baseline</span>
+        <h2 class="mt-3 font-display text-2xl font-semibold tracking-tight">Eval harness keeps the agent honest.</h2>
+        <p class="mt-3 text-sm leading-relaxed text-slate-400">
+          Every PR runs the agent against 55 questions on the heuristic backend. CI fails on any
+          &gt; 2pp regression. The numbers below are real, not aspirational.
         </p>
       </div>
-      <div class="flex items-center gap-8">
+      <div class="flex items-center gap-10">
         {% if eval_baseline %}
           <div>
-            <div class="font-display text-5xl font-bold tracking-tight gradient-text"
+            <div class="font-display text-4xl font-semibold tracking-tight"
                  data-countup="{{ '%.1f'|format(eval_baseline.pass_rate * 100) }}"
                  data-decimals="1"
                  data-suffix="%">
               {{ '%.1f'|format(eval_baseline.pass_rate * 100) }}%
             </div>
-            <div class="text-xs uppercase tracking-widest text-slate-400">pass rate</div>
+            <div class="mt-1 text-xs uppercase tracking-widest text-slate-500">pass rate</div>
           </div>
           <div>
-            <div class="font-display text-5xl font-bold tracking-tight">
+            <div class="font-display text-4xl font-semibold tracking-tight">
               <span data-countup="{{ eval_baseline.n_passed }}">{{ eval_baseline.n_passed }}</span>
-              <span class="text-slate-500">/</span>
+              <span class="text-slate-600">/</span>
               <span class="text-slate-400">{{ eval_baseline.n_cases }}</span>
             </div>
-            <div class="text-xs uppercase tracking-widest text-slate-400">cases</div>
+            <div class="mt-1 text-xs uppercase tracking-widest text-slate-500">cases</div>
           </div>
         {% else %}
           <div class="text-sm text-slate-400">Run /evals to pin a baseline.</div>
         {% endif %}
         <a href="/evals"
-           class="lift glow-border rounded-2xl bg-gradient-to-r from-accent-500 to-cyan2-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-accent-500/30 transition">
-          View harness →
+           class="inline-flex items-center gap-2 rounded-md border border-accent-500/30 bg-accent-500/10 px-4 py-2 text-sm font-medium text-accent-400 transition hover:bg-accent-500/15">
+          View harness
+          <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
         </a>
       </div>
     </div>
@@ -181,29 +192,35 @@
 </section>
 
 <!-- ============================================================ -->
-<!-- PIPELINE STRIP  ·  staggered reveal                           -->
+<!-- PIPELINE STRIP                                                -->
 <!-- ============================================================ -->
-<section class="mt-24">
-  <h2 class="reveal font-display text-2xl font-bold">The pipeline, end to end</h2>
-  <p class="reveal reveal-delay-1 mt-2 text-sm text-slate-400">Nine stages — every one is observable, restartable, and eval-checked.</p>
-  <div class="mt-6 grid gap-3 text-sm md:grid-cols-9">
+<section class="mt-20">
+  <div class="reveal max-w-2xl">
+    <span class="eyebrow">end-to-end pipeline</span>
+    <h2 class="mt-3 font-display text-3xl font-semibold tracking-tight">Nine stages. All observable.</h2>
+    <p class="mt-3 text-[15px] leading-relaxed text-slate-400">
+      Every stage is restartable, instrumented, and eval-checked.
+    </p>
+  </div>
+  <div class="mt-8 grid gap-3 text-sm md:grid-cols-3 lg:grid-cols-9">
     {% set pipeline = [
-      ('Ingest',  'CSV · Parquet · Postgres · S3 · Sheets',     'from-accent-500 to-cyan2-400'),
-      ('Clean',   'Schema infer · null fill · type coerce',     'from-cyan2-400 to-cyan2-500'),
-      ('Score',   'Anomaly · drift · churn · demand',           'from-cyan2-500 to-grape-400'),
-      ('Plan',    'Heuristic / Gemini tool router',              'from-grape-400 to-grape-500'),
-      ('Decide',  'Bandit picks next action',                    'from-grape-500 to-rose2-500'),
-      ('Notify',  'Slack · email · Sheets',                      'from-rose2-500 to-rose2-400'),
-      ('Audit',   'Plan + obs trace persisted',                  'from-rose2-400 to-sun-500'),
-      ('Eval',    '55 cases on every PR',                        'from-sun-500 to-sun-400'),
-      ('Deploy',  'Docker · Render · GHCR',                      'from-sun-400 to-accent-500'),
+      ('Ingest', 'CSV · Parquet · Postgres · S3 · Sheets'),
+      ('Clean',  'Schema infer · null fill · type coerce'),
+      ('Score',  'Anomaly · drift · churn · demand'),
+      ('Plan',   'Heuristic / Gemini tool router'),
+      ('Decide', 'Bandit picks next action'),
+      ('Notify', 'Slack · email · Sheets'),
+      ('Audit',  'Plan + obs trace persisted'),
+      ('Eval',   '55 cases on every PR'),
+      ('Deploy', 'Docker · Render · GHCR'),
     ] %}
-    {% for label, sub, grad in pipeline %}
-      <div class="reveal reveal-delay-{{ loop.index }} lift glass rounded-2xl p-3" data-tilt>
-        <div class="bg-gradient-to-br {{ grad }} bg-clip-text font-display text-sm font-bold text-transparent">
-          {{ loop.index }}. {{ label }}
+    {% for label, sub in pipeline %}
+      <div class="reveal reveal-delay-{{ loop.index }} lift glass rounded-lg p-3.5">
+        <div class="flex items-baseline gap-1.5">
+          <span class="font-mono text-[10px] text-slate-500">{{ '%02d'|format(loop.index) }}</span>
+          <span class="font-display text-sm font-semibold">{{ label }}</span>
         </div>
-        <div class="mt-1 text-xs leading-snug text-slate-400">{{ sub }}</div>
+        <div class="mt-1.5 text-[11px] leading-snug text-slate-500">{{ sub }}</div>
       </div>
     {% endfor %}
   </div>
@@ -212,19 +229,21 @@
 <!-- ============================================================ -->
 <!-- FINAL CTA                                                     -->
 <!-- ============================================================ -->
-<section class="mt-24">
-  <div class="grid gap-6 md:grid-cols-3">
+<section class="mt-20">
+  <div class="grid gap-px overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] md:grid-cols-3">
     {% set ctas = [
-      ('/demo',     'No signup',  'Try the demo →',           'Bundled retail dataset, four KPIs, real numbers in <2 sec.', 'from-accent-500 to-cyan2-500'),
-      ('/workbench','Anonymous',  'Open the workbench →',     'Ask questions; watch the agent pick tools and run them.',     'from-cyan2-500 to-grape-500'),
-      ('/signup',   'Persistent', 'Sign up & connect data →', 'Save connections, recommendations, and bandit feedback across sessions.', 'from-grape-500 to-rose2-500'),
+      ('/demo',     'No signup',  'Try the demo',           'Bundled retail dataset, four KPIs, real numbers in <2 sec.'),
+      ('/workbench','Anonymous',  'Open the workbench',     'Ask questions; watch the agent pick tools and run them.'),
+      ('/signup',   'Persistent', 'Sign up & connect data', 'Save connections, recommendations, and bandit feedback across sessions.'),
     ] %}
-    {% for href, kicker, title, body, grad in ctas %}
+    {% for href, kicker, title, body in ctas %}
       <a href="{{ href }}"
-         class="reveal reveal-delay-{{ loop.index }} lift glow-border group glass rounded-4xl p-6 transition hover:bg-white/5"
-         data-tilt>
-        <div class="bg-gradient-to-r {{ grad }} bg-clip-text text-xs font-bold uppercase tracking-widest text-transparent">{{ kicker }}</div>
-        <div class="mt-2 font-display text-xl font-bold group-hover:text-white">{{ title }}</div>
+         class="reveal reveal-delay-{{ loop.index }} group block bg-ink-900/60 p-7 transition hover:bg-ink-800/60">
+        <div class="text-xs font-medium uppercase tracking-widest text-accent-400">{{ kicker }}</div>
+        <div class="mt-2 flex items-center gap-2 font-display text-lg font-semibold group-hover:text-white">
+          {{ title }}
+          <svg viewBox="0 0 16 16" class="h-3.5 w-3.5 -translate-x-1 opacity-0 transition group-hover:translate-x-0 group-hover:opacity-100" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </div>
         <div class="mt-2 text-sm leading-relaxed text-slate-400">{{ body }}</div>
       </a>
     {% endfor %}

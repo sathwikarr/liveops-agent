@@ -5,34 +5,34 @@
 {% block content %}
 <header class="mb-10 flex flex-wrap items-end justify-between gap-4 hero-enter">
   <div>
-    <span class="chip">dashboard · @{{ user }}</span>
-    <h1 class="mt-3 font-display text-4xl font-bold tracking-tight md:text-5xl">
-      Welcome back, <span class="gradient-text">{{ user }}</span>.
+    <span class="eyebrow">dashboard · @{{ user }}</span>
+    <h1 class="mt-3 font-display text-4xl font-semibold tracking-tight md:text-5xl">
+      Welcome back, <span class="accent-text">{{ user }}</span>.
     </h1>
-    <p class="mt-3 text-slate-300">
+    <p class="mt-3 text-[15px] leading-relaxed text-slate-400">
       Your sandbox dataset, refreshed on each load. Connect a real source from
-      <a href="/run-agent" class="text-accent-500 hover:underline">Run agent</a> to swap it out.
+      <a href="/run-agent" class="text-accent-400 hover:underline">Run agent</a> to swap it out.
     </p>
   </div>
   <a href="/run-agent"
-     class="lift glow-border rounded-2xl bg-gradient-to-r from-accent-500 via-cyan2-500 to-grape-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-accent-500/30 transition">
-    ▶ Run an agent pass
+     class="rounded-md bg-accent-500 px-4 py-2.5 text-sm font-medium text-ink-950 shadow-sm transition hover:bg-accent-400">
+    Run an agent pass
   </a>
 </header>
 
 <section class="reveal">
-  <h2 class="font-display text-lg font-bold text-slate-200">Weekly revenue (last 8 weeks)</h2>
+  <h2 class="font-display text-lg font-semibold text-slate-200">Weekly revenue (last 8 weeks)</h2>
   {% if trend_records %}
-    <div class="mt-4 overflow-x-auto rounded-3xl glass">
+    <div class="mt-4 overflow-x-auto rounded-xl border border-white/5 bg-ink-900/40">
       <table class="min-w-full text-sm">
-        <thead class="bg-white/5 text-xs uppercase tracking-widest text-slate-400">
+        <thead class="bg-white/[0.03] text-xs uppercase tracking-widest text-slate-500">
           <tr>
             {% for k in trend_records[0].keys() %}<th class="px-4 py-3 text-left font-medium">{{ k }}</th>{% endfor %}
           </tr>
         </thead>
         <tbody class="divide-y divide-white/5">
           {% for row in trend_records %}
-            <tr class="transition hover:bg-white/5">
+            <tr class="transition hover:bg-white/[0.03]">
               {% for v in row.values() %}<td class="whitespace-nowrap px-4 py-2.5 text-slate-300">{{ v }}</td>{% endfor %}
             </tr>
           {% endfor %}
@@ -40,7 +40,7 @@
       </table>
     </div>
   {% else %}
-    <div class="glass mt-4 rounded-3xl border-dashed p-8 text-center text-sm text-slate-400">
+    <div class="mt-4 rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center text-sm text-slate-400">
       No trend yet. Connect a dataset to see this populate.
     </div>
   {% endif %}
@@ -48,16 +48,18 @@
 
 <section class="mt-12 grid gap-6 md:grid-cols-3">
   {% set cards = [
-    ('/workbench', 'Workbench', 'Ask a question →',          'Plain English over your dataset, with a tool trace.',                'from-accent-500 to-cyan2-500'),
-    ('/evals',     'Evals',     'Run the harness →',         '55 cases, regression-checked against the pinned baseline.',          'from-cyan2-500 to-grape-500'),
-    ('/run-agent', 'Agent',     'Run a full ops pass →',     'Detect anomalies, recommend actions, dispatch notifications.',       'from-grape-500 to-rose2-500'),
+    ('/workbench', 'Workbench', 'Ask a question',      'Plain English over your dataset, with a tool trace.'),
+    ('/evals',     'Evals',     'Run the harness',     '55 cases, regression-checked against the pinned baseline.'),
+    ('/run-agent', 'Agent',     'Run a full ops pass', 'Detect anomalies, recommend actions, dispatch notifications.'),
   ] %}
-  {% for href, kicker, title, body, grad in cards %}
+  {% for href, kicker, title, body in cards %}
     <a href="{{ href }}"
-       class="reveal reveal-delay-{{ loop.index }} lift glow-border group glass rounded-4xl p-6 transition hover:bg-white/5"
-       data-tilt>
-      <div class="bg-gradient-to-r {{ grad }} bg-clip-text text-xs font-bold uppercase tracking-widest text-transparent">{{ kicker }}</div>
-      <div class="mt-2 font-display text-lg font-bold group-hover:text-white">{{ title }}</div>
+       class="reveal reveal-delay-{{ loop.index }} lift group glass rounded-xl p-6 transition">
+      <div class="text-xs font-medium uppercase tracking-widest text-accent-400">{{ kicker }}</div>
+      <div class="mt-2 flex items-center gap-2 font-display text-lg font-semibold group-hover:text-white">
+        {{ title }}
+        <svg viewBox="0 0 16 16" class="h-3.5 w-3.5 -translate-x-1 opacity-0 transition group-hover:translate-x-0 group-hover:opacity-100" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </div>
       <p class="mt-2 text-sm leading-relaxed text-slate-400">{{ body }}</p>
     </a>
   {% endfor %}

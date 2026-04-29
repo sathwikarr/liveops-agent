@@ -5,23 +5,23 @@
 {% block content %}
 <header class="mb-10 flex flex-wrap items-end justify-between gap-6 hero-enter">
   <div>
-    <span class="chip">eval harness · public</span>
-    <h1 class="mt-3 font-display text-4xl font-bold tracking-tight md:text-5xl">
-      {{ n_cases }} cases × 10 tools, <span class="gradient-text">scored four ways.</span>
+    <span class="eyebrow">eval harness · public</span>
+    <h1 class="mt-3 font-display text-4xl font-semibold tracking-tight md:text-5xl">
+      {{ n_cases }} cases × 10 tools, <span class="accent-text">scored four ways.</span>
     </h1>
-    <p class="mt-3 max-w-2xl text-slate-300">
+    <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-slate-400">
       Tool-match, args-match, no-forbidden, must-succeed. Pass on tool-match ≥ 0.5 and clean must-succeed.
       CI fails on any &gt; 2pp regression vs. the pinned baseline.
     </p>
   </div>
   {% if baseline %}
-    <div class="lift glass rounded-3xl p-6 text-right" data-tilt>
+    <div class="glass rounded-xl p-6 text-right">
       <div class="text-xs uppercase tracking-widest text-slate-400">Pinned baseline</div>
-      <div class="mt-2 font-display text-4xl font-bold gradient-text"
+      <div class="mt-2 font-display text-4xl font-semibold text-white"
            data-countup="{{ '%.1f'|format(baseline.pass_rate * 100) }}"
            data-decimals="1"
            data-suffix="%">{{ '%.1f'|format(baseline.pass_rate * 100) }}%</div>
-      <div class="text-xs text-slate-400">{{ baseline.n_passed }} / {{ baseline.n_cases }} on backend = {{ baseline.backend }}</div>
+      <div class="text-xs text-slate-500">{{ baseline.n_passed }} / {{ baseline.n_cases }} on backend = {{ baseline.backend }}</div>
     </div>
   {% endif %}
 </header>
@@ -30,10 +30,10 @@
 
   <!-- Controls + summary -->
   <section class="md:col-span-2">
-    <div class="glass rounded-3xl p-6">
+    <div class="glass rounded-xl p-6">
       <div class="text-xs uppercase tracking-widest text-slate-400">Run config</div>
       <label class="mt-3 block text-sm font-medium text-slate-300">Backend</label>
-      <select x-model="backend" class="mt-1 w-full rounded-xl border border-white/10 bg-ink-950/60 p-2.5 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500">
+      <select x-model="backend" class="mt-1 w-full rounded-md border border-white/10 bg-ink-950/60 p-2.5 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500">
         <option value="heuristic">heuristic (deterministic)</option>
         <option value="auto">auto (LLM if configured)</option>
         <option value="llm">llm (force Gemini)</option>
@@ -43,51 +43,51 @@
       <div class="mt-1 flex flex-wrap gap-1.5">
         {% for tag in tags %}
           <button type="button" @click="toggleTag('{{ tag }}')"
-            :class="tags.includes('{{ tag }}') ? 'border-accent-500 bg-accent-500/15 text-accent-500' : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'"
+            :class="tags.includes('{{ tag }}') ? 'border-accent-500 bg-accent-500/15 text-accent-400' : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'"
             class="rounded-full border px-3 py-1 text-xs transition">{{ tag }}</button>
         {% endfor %}
       </div>
 
       <button :disabled="running" @click="run()"
-        class="lift glow-border mt-6 w-full rounded-2xl bg-gradient-to-r from-accent-500 via-cyan2-500 to-grape-500 py-2.5 text-sm font-semibold text-white shadow-lg shadow-accent-500/30 transition disabled:opacity-60">
-        <span x-show="!running">▶ Run evals</span>
+        class="mt-6 w-full rounded-md bg-accent-500 py-2.5 text-sm font-medium text-ink-950 shadow-sm transition hover:bg-accent-400 disabled:opacity-60">
+        <span x-show="!running">Run evals</span>
         <span x-show="running" class="inline-flex items-center gap-2">
           <span class="live-dot" aria-hidden="true"></span> Running…
         </span>
       </button>
       <div x-show="running" class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
-        <div class="h-full bg-gradient-to-r from-accent-500 to-cyan2-500 transition-all" :style="`width: ${progress}%`"></div>
+        <div class="h-full bg-accent-500/80 transition-all" :style="`width: ${progress}%`"></div>
       </div>
     </div>
 
     <template x-if="report">
       <div class="mt-6 grid grid-cols-2 gap-3">
-        <div class="glass rounded-2xl p-4">
+        <div class="glass rounded-md p-4">
           <div class="text-xs uppercase tracking-widest text-slate-400">Pass rate</div>
-          <div class="mt-1 font-display text-2xl font-bold" x-text="(report.pass_rate * 100).toFixed(1) + '%'"></div>
-          <div class="text-xs text-slate-400" x-text="report.n_passed + ' / ' + report.n_cases"></div>
+          <div class="mt-1 font-display text-2xl font-semibold text-white" x-text="(report.pass_rate * 100).toFixed(1) + '%'"></div>
+          <div class="text-xs text-slate-500" x-text="report.n_passed + ' / ' + report.n_cases"></div>
         </div>
-        <div class="glass rounded-2xl p-4">
+        <div class="glass rounded-md p-4">
           <div class="text-xs uppercase tracking-widest text-slate-400">Mean overall</div>
-          <div class="mt-1 font-display text-2xl font-bold" x-text="report.mean_overall.toFixed(3)"></div>
+          <div class="mt-1 font-display text-2xl font-semibold text-white" x-text="report.mean_overall.toFixed(3)"></div>
         </div>
-        <div class="glass rounded-2xl p-4">
+        <div class="glass rounded-md p-4">
           <div class="text-xs uppercase tracking-widest text-slate-400">Tool-pick</div>
-          <div class="mt-1 font-display text-2xl font-bold" x-text="report.mean_tool_match.toFixed(3)"></div>
+          <div class="mt-1 font-display text-2xl font-semibold text-white" x-text="report.mean_tool_match.toFixed(3)"></div>
         </div>
-        <div class="glass rounded-2xl p-4">
+        <div class="glass rounded-md p-4">
           <div class="text-xs uppercase tracking-widest text-slate-400">Args</div>
-          <div class="mt-1 font-display text-2xl font-bold" x-text="report.mean_args_match.toFixed(3)"></div>
+          <div class="mt-1 font-display text-2xl font-semibold text-white" x-text="report.mean_args_match.toFixed(3)"></div>
         </div>
 
         <template x-if="baseline">
-          <div :class="deltaClass()" class="col-span-2 rounded-2xl border p-4 text-sm">
+          <div :class="deltaClass()" class="col-span-2 rounded-md border p-4 text-sm">
             <span x-text="deltaLabel()"></span>
           </div>
         </template>
 
         <a class="col-span-2 mt-1 text-center text-xs text-slate-400 hover:text-white"
-           :href="downloadUrl" :download="`eval_report_${report.backend}.json`">⤓ Download report (JSON)</a>
+           :href="downloadUrl" :download="`eval_report_${report.backend}.json`">Download report (JSON)</a>
       </div>
     </template>
   </section>
@@ -95,8 +95,8 @@
   <!-- Results -->
   <section class="md:col-span-3">
     <template x-if="!report && !running">
-      <div class="glass rounded-3xl border-dashed p-10 text-center text-sm text-slate-400">
-        Pick a backend + filters, then click <strong class="text-slate-200">▶ Run evals</strong>.
+      <div class="rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-10 text-center text-sm text-slate-400">
+        Pick a backend + filters, then click <strong class="text-slate-200">Run evals</strong>.
         ~5 sec on heuristic.
       </div>
     </template>
@@ -104,8 +104,8 @@
     <template x-if="report">
       <div class="space-y-6">
         <!-- Per-tool bars -->
-        <div class="glass rounded-3xl p-6">
-          <h2 class="font-display text-base font-bold">Per-tool pass rate</h2>
+        <div class="glass rounded-xl p-6">
+          <h2 class="font-display text-base font-semibold">Per-tool pass rate</h2>
           <ul class="mt-4 space-y-2 text-sm">
             <template x-for="row in perToolRows" :key="row.tool">
               <li class="flex items-center gap-3">
@@ -121,15 +121,15 @@
         </div>
 
         <!-- Per-case table -->
-        <div class="glass rounded-3xl">
+        <div class="glass rounded-xl">
           <div class="flex items-center justify-between p-6 pb-3">
-            <h2 class="font-display text-base font-bold">Per-case detail</h2>
+            <h2 class="font-display text-base font-semibold">Per-case detail</h2>
             <input x-model="filterText" placeholder="filter..."
-              class="rounded-xl border border-white/10 bg-ink-950/60 px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500">
+              class="rounded-md border border-white/10 bg-ink-950/60 px-3 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500">
           </div>
           <div class="max-h-[480px] overflow-auto">
             <table class="min-w-full text-sm">
-              <thead class="sticky top-0 bg-white/5 text-xs uppercase tracking-widest text-slate-400 backdrop-blur">
+              <thead class="sticky top-0 bg-white/[0.03] text-xs uppercase tracking-widest text-slate-500 backdrop-blur">
                 <tr>
                   <th class="px-3 py-2 text-left font-medium">id</th>
                   <th class="px-3 py-2 text-left font-medium">question</th>
@@ -142,13 +142,13 @@
               </thead>
               <tbody class="divide-y divide-white/5">
                 <template x-for="r in filteredCases" :key="r.case_id">
-                  <tr class="transition hover:bg-white/5">
+                  <tr class="transition hover:bg-white/[0.03]">
                     <td class="whitespace-nowrap px-3 py-2 font-mono text-xs text-slate-300" x-text="r.case_id"></td>
                     <td class="px-3 py-2 text-slate-300" x-text="r.question"></td>
                     <td class="whitespace-nowrap px-3 py-2 font-mono text-xs text-slate-400" x-text="(r.planned_tools || []).join(', ') || '—'"></td>
                     <td class="px-3 py-2 text-right tabular-nums text-slate-300" x-text="r.tool_match.toFixed(2)"></td>
                     <td class="px-3 py-2 text-right tabular-nums text-slate-300" x-text="r.args_match.toFixed(2)"></td>
-                    <td class="px-3 py-2 text-right tabular-nums" :class="r.passed ? 'text-accent-500' : 'text-rose2-400'" x-text="r.overall.toFixed(2)"></td>
+                    <td class="px-3 py-2 text-right tabular-nums" :class="r.passed ? 'text-accent-400' : 'text-rose2-400'" x-text="r.overall.toFixed(2)"></td>
                     <td class="px-3 py-2 text-right" x-text="r.passed ? '✓' : '✕'"></td>
                   </tr>
                 </template>
@@ -159,11 +159,11 @@
 
         <!-- Failures -->
         <template x-if="failures.length">
-          <div class="glass rounded-3xl border-rose2-500/30 p-6">
-            <h2 class="font-display text-base font-bold text-rose2-400" x-text="`Failures (${failures.length})`"></h2>
+          <div class="glass rounded-xl border-rose2-500/30 p-6">
+            <h2 class="font-display text-base font-semibold text-rose2-400" x-text="`Failures (${failures.length})`"></h2>
             <div class="mt-3 space-y-2 text-sm">
               <template x-for="r in failures" :key="r.case_id">
-                <details class="rounded-2xl border border-white/5 bg-white/5 p-3">
+                <details class="rounded-md border border-white/5 bg-white/[0.03] p-3">
                   <summary class="cursor-pointer">
                     <code class="font-mono text-xs text-rose2-400" x-text="r.case_id"></code>
                     <span class="ml-2 text-slate-300" x-text="r.question"></span>
