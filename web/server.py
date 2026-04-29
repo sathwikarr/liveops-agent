@@ -106,12 +106,27 @@ def create_app() -> FastAPI:
 # Helpers
 # --------------------------------------------------------------------------- #
 
+# Cache-buster string appended to /static/site.css so browsers always pick up
+# the latest stylesheet on each deploy. Computed once at boot from the file's
+# mtime — falls back to a random nonce if the file is missing.
+def _static_version() -> str:
+    css = STATIC_DIR / "site.css"
+    try:
+        return str(int(css.stat().st_mtime))
+    except OSError:
+        return secrets.token_hex(4)
+
+
+_STATIC_VERSION = _static_version()
+
+
 def _ctx(request: Request, **extra: Any) -> Dict[str, Any]:
     """Base template context — every render passes this."""
     return {
         "username": request.session.get("username"),
         "flash": request.session.pop("flash", None),
         "current_path": request.url.path,
+        "static_version": _STATIC_VERSION,
         **extra,
     }
 

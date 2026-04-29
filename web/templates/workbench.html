@@ -3,10 +3,12 @@
 {% block title %}Workbench · LiveOps Agent{% endblock %}
 
 {% block content %}
-<header class="mb-8">
-  <div class="text-xs uppercase tracking-widest text-accent-500">workbench · public</div>
-  <h1 class="mt-1 text-3xl font-bold tracking-tight">Ask the agent. Watch it pick tools.</h1>
-  <p class="mt-2 max-w-2xl text-slate-300">
+<header class="mb-10 hero-enter">
+  <span class="chip">workbench · public</span>
+  <h1 class="mt-3 font-display text-4xl font-bold tracking-tight md:text-5xl">
+    Ask the agent. <span class="gradient-text">Watch it pick tools.</span>
+  </h1>
+  <p class="mt-3 max-w-2xl text-slate-300">
     Each question is routed to one or more of the {{ tools|length }} registered tools.
     The plan, observation trace, and final answer all come back as JSON — same code path the eval harness scores.
   </p>
@@ -16,60 +18,63 @@
 
   <!-- Ask box + answer -->
   <section class="md:col-span-3">
-    <form @submit.prevent="ask()" class="rounded-2xl border border-ink-800 bg-ink-900/40 p-5">
+    <form @submit.prevent="ask()" class="glass rounded-3xl p-6">
       <label class="block text-sm font-medium text-slate-300">Your question</label>
       <textarea x-model="question" rows="2"
         placeholder="e.g. which 5 customers spend the most?"
-        class="mt-2 block w-full rounded-lg border border-ink-700 bg-ink-950 p-3 text-sm text-slate-100 placeholder-slate-500 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"></textarea>
+        class="mt-2 block w-full rounded-2xl border border-white/10 bg-ink-950/60 p-3 text-sm text-slate-100 placeholder-slate-500 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"></textarea>
 
-      <div class="mt-3 flex flex-wrap items-center gap-3">
+      <div class="mt-4 flex flex-wrap items-center gap-3">
         <label class="text-xs text-slate-400">Backend</label>
-        <select x-model="backend" class="rounded-lg border border-ink-700 bg-ink-800 px-2 py-1 text-xs text-slate-200">
+        <select x-model="backend" class="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200 focus:border-accent-500 focus:outline-none">
           <option value="heuristic">heuristic (offline)</option>
           <option value="auto">auto (LLM if configured)</option>
           <option value="llm">llm (force Gemini)</option>
         </select>
         <button :disabled="loading" type="submit"
-          class="ml-auto rounded-lg bg-accent-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-accent-500 disabled:opacity-60">
+          class="lift glow-border ml-auto rounded-2xl bg-gradient-to-r from-accent-500 via-cyan2-500 to-grape-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-accent-500/30 transition disabled:opacity-60">
           <span x-show="!loading">▶ Run</span>
           <span x-show="loading">Running…</span>
         </button>
       </div>
 
-      <div class="mt-3 flex flex-wrap gap-2 text-xs">
+      <div class="mt-4 flex flex-wrap gap-2 text-xs">
         <template x-for="ex in examples" :key="ex">
           <button @click="question = ex" type="button"
-            class="rounded-full border border-ink-700 bg-ink-800 px-3 py-1 text-slate-300 hover:border-ink-700 hover:bg-ink-700 hover:text-white"
+            class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-300 transition hover:bg-white/10 hover:text-white"
             x-text="ex"></button>
         </template>
       </div>
     </form>
 
     <template x-if="error">
-      <div class="mt-4 rounded-lg border border-rose-700 bg-rose-700/10 p-3 text-sm text-rose-300" x-text="error"></div>
+      <div class="glass mt-4 rounded-2xl border-rose2-500/40 p-3 text-sm text-rose2-400" x-text="error"></div>
     </template>
 
     <template x-if="result">
       <div class="mt-6 space-y-5">
         <!-- Answer -->
-        <div class="rounded-2xl border border-accent-700/40 bg-accent-700/5 p-5">
-          <div class="text-xs uppercase tracking-wide text-accent-500">Answer</div>
-          <pre class="mt-2 whitespace-pre-wrap font-mono text-sm leading-relaxed text-slate-200" x-text="result.answer"></pre>
+        <div class="glass-strong relative overflow-hidden rounded-3xl p-6">
+          <div aria-hidden="true" class="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-gradient-to-br from-accent-500/30 to-cyan2-500/20 blur-2xl"></div>
+          <div class="relative">
+            <div class="text-xs uppercase tracking-widest text-accent-500">Answer</div>
+            <pre class="mt-2 whitespace-pre-wrap font-mono text-sm leading-relaxed text-slate-200" x-text="result.answer"></pre>
+          </div>
         </div>
 
         <!-- Plan -->
-        <div class="rounded-xl border border-ink-800 bg-ink-900/40 p-5">
+        <div class="glass rounded-3xl p-6">
           <div class="flex items-center justify-between">
-            <div class="text-xs uppercase tracking-wide text-slate-400">
+            <div class="text-xs uppercase tracking-widest text-slate-400">
               Plan · backend = <span class="text-slate-300" x-text="result.plan.backend"></span>
             </div>
             <div class="text-xs text-slate-500" x-text="result.plan.steps.length + ' step' + (result.plan.steps.length === 1 ? '' : 's')"></div>
           </div>
           <ol class="mt-3 space-y-2 text-sm">
             <template x-for="(s, i) in result.plan.steps" :key="i">
-              <li class="rounded-lg border border-ink-800 bg-ink-950/40 p-3">
+              <li class="rounded-2xl border border-white/5 bg-white/5 p-3">
                 <div class="flex items-baseline justify-between gap-3">
-                  <code class="rounded bg-accent-700/20 px-2 py-0.5 font-mono text-xs text-accent-500" x-text="s.tool"></code>
+                  <code class="rounded-lg bg-accent-500/20 px-2 py-0.5 font-mono text-xs text-accent-500" x-text="s.tool"></code>
                   <span class="text-xs text-slate-500" x-text="JSON.stringify(s.args)"></span>
                 </div>
                 <div class="mt-1 text-xs italic text-slate-400" x-text="s.why"></div>
@@ -79,16 +84,16 @@
         </div>
 
         <!-- Observations -->
-        <div class="rounded-xl border border-ink-800 bg-ink-900/40 p-5">
-          <div class="text-xs uppercase tracking-wide text-slate-400">Observations</div>
+        <div class="glass rounded-3xl p-6">
+          <div class="text-xs uppercase tracking-widest text-slate-400">Observations</div>
           <div class="mt-3 space-y-2">
             <template x-for="(obs, i) in result.observations" :key="i">
-              <details class="rounded-lg border border-ink-800 bg-ink-950/40 p-3">
+              <details class="rounded-2xl border border-white/5 bg-white/5 p-3">
                 <summary class="cursor-pointer text-sm">
                   <code class="font-mono text-xs text-accent-500" x-text="obs.tool"></code>
                   <span class="ml-2 text-xs text-slate-500" x-text="summarise(obs.result)"></span>
                 </summary>
-                <pre class="mt-2 max-h-72 overflow-auto rounded bg-ink-950 p-3 font-mono text-xs text-slate-300" x-text="JSON.stringify(obs.result, null, 2)"></pre>
+                <pre class="mt-2 max-h-72 overflow-auto rounded-xl bg-ink-950/80 p-3 font-mono text-xs text-slate-300" x-text="JSON.stringify(obs.result, null, 2)"></pre>
               </details>
             </template>
           </div>
@@ -100,8 +105,8 @@
   <!-- Tool catalog sidebar -->
   <aside class="md:col-span-2">
     <div class="sticky top-20 space-y-4">
-      <div class="rounded-2xl border border-ink-800 bg-ink-900/40 p-5">
-        <div class="text-xs uppercase tracking-wide text-slate-400">Tool catalog</div>
+      <div class="glass rounded-3xl p-6">
+        <div class="text-xs uppercase tracking-widest text-slate-400">Tool catalog</div>
         <ul class="mt-3 space-y-3 text-sm">
           {% for t in tools %}
             <li>
@@ -110,7 +115,7 @@
               {% if t.params %}
                 <div class="mt-1 flex flex-wrap gap-1.5 text-xs text-slate-500">
                   {% for k, v in t.params.items() %}
-                    <span class="rounded bg-ink-800 px-1.5 py-0.5 font-mono">{{ k }}</span>
+                    <span class="rounded-lg bg-white/5 px-1.5 py-0.5 font-mono">{{ k }}</span>
                   {% endfor %}
                 </div>
               {% endif %}
@@ -118,8 +123,8 @@
           {% endfor %}
         </ul>
       </div>
-      <div class="rounded-2xl border border-ink-800 bg-ink-900/40 p-5 text-sm text-slate-300">
-        <div class="font-semibold text-white">How is this graded?</div>
+      <div class="glass rounded-3xl p-6 text-sm text-slate-300">
+        <div class="font-display font-bold text-white">How is this graded?</div>
         <p class="mt-2">
           The same plans are run against a <a class="text-accent-500 hover:underline" href="/evals">55-case corpus</a>
           and scored on tool-match, args-match, no-forbidden, and must-succeed. CI fails on any &gt;2pp regression.

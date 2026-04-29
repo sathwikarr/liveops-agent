@@ -199,6 +199,147 @@ code:not(pre code) {
 main { animation: fade-in 400ms ease-out; }
 
 /* ========================================================================= *
+ * Toy world — floating animated SVG figures + mesh background + glass cards
+ * ========================================================================= */
+
+/* ---- Animated mesh-gradient background.
+   A few large blurred radial gradients drifting on a long loop give the page
+   a sense of depth without paying for a real WebGL background. ---- */
+@keyframes mesh-drift {
+  0%   { background-position:   0%   0%, 100%   0%,  50% 100%,   0% 100%, 100% 100%; }
+  50%  { background-position:  20%  30%,  80%  20%,  40%  60%,  10%  70%,  90%  60%; }
+  100% { background-position:   0%   0%, 100%   0%,  50% 100%,   0% 100%, 100% 100%; }
+}
+.bg-mesh {
+  background-color: #070713;
+  background-image:
+    radial-gradient(45rem 35rem at 12% 18%, rgba(168,  85, 247, 0.25), transparent 60%),
+    radial-gradient(40rem 30rem at 88% 12%, rgba( 34, 211, 238, 0.22), transparent 60%),
+    radial-gradient(50rem 40rem at 50% 92%, rgba( 16, 185, 129, 0.22), transparent 60%),
+    radial-gradient(38rem 28rem at  4% 78%, rgba(244,  63,  94, 0.18), transparent 60%),
+    radial-gradient(34rem 26rem at 96% 70%, rgba(251, 191,  36, 0.16), transparent 60%);
+  background-size: 200% 200%, 200% 200%, 200% 200%, 200% 200%, 200% 200%;
+  animation: mesh-drift 28s ease-in-out infinite;
+}
+.bg-mesh::after {
+  /* Faint dotted grid, on top, for "engineered" texture */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  pointer-events: none;
+}
+
+/* ---- Glass card utility (used everywhere now) ---- */
+.glass {
+  background-color: rgba(15, 15, 35, 0.55);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 18px 50px -20px rgba(0, 0, 0, 0.55);
+}
+.glass-strong {
+  background-color: rgba(15, 15, 35, 0.72);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+/* ---- Toy stage: each <svg.toy> reads --py from the parallax JS,
+       then layers an animation on top. We separate translate (parallax)
+       from animation (bob/spin) so they don't fight. ---- */
+.toy {
+  position: absolute;
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45));
+  will-change: transform;
+  transform: translate3d(0, var(--py, 0px), 0);
+  transition: filter 250ms ease;
+}
+.toy > * { transform-box: fill-box; transform-origin: center; }
+
+@keyframes toy-bob {
+  0%, 100% { translate: 0 0;    rotate: -3deg; }
+  50%      { translate: 0 -10px; rotate:  3deg; }
+}
+@keyframes toy-bob-slow {
+  0%, 100% { translate: 0 0;    rotate:  2deg; }
+  50%      { translate: 0 -14px; rotate: -4deg; }
+}
+@keyframes toy-spin {
+  from { rotate:   0deg; }
+  to   { rotate: 360deg; }
+}
+@keyframes toy-spin-slow {
+  from { rotate:   0deg; }
+  to   { rotate: 360deg; }
+}
+@keyframes toy-spin-rev {
+  from { rotate:   0deg; }
+  to   { rotate: -360deg; }
+}
+
+/* The animations target the SVG itself; CSS individual transform
+   props (translate / rotate) compose with the parent's translate3d
+   via parallax, so toys bob *and* parallax at the same time. */
+.toy.toy-bob       { animation: toy-bob       6s  ease-in-out infinite; }
+.toy.toy-bob-slow  { animation: toy-bob-slow  9s  ease-in-out infinite; }
+.toy.toy-spin      { animation: toy-spin      14s linear      infinite; }
+.toy.toy-spin-slow { animation: toy-spin-slow 22s linear      infinite; }
+.toy.toy-spin-rev  { animation: toy-spin-rev  18s linear      infinite; }
+
+/* Cursor halo: a soft glow that follows the mouse on the hero */
+#cursor-halo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 400px;
+  height: 400px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.18), rgba(34, 211, 238, 0.08) 40%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(8px);
+  will-change: transform;
+}
+
+/* Tilt cards need 3D perspective on a parent; we set it on the card itself */
+[data-tilt] {
+  transform-style: preserve-3d;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+/* Gradient text utility — used on hero headline accent */
+.gradient-text {
+  background: linear-gradient(120deg, #34d399 0%, #22d3ee 35%, #a855f7 70%, #f43f5e 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 8s ease-in-out infinite;
+}
+
+/* Premium chip used in headers */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #cbd5e1;
+}
+
+/* ========================================================================= *
  * Reduced motion — honor it. All animations become instant, no movement.
  * ========================================================================= */
 @media (prefers-reduced-motion: reduce) {
@@ -210,4 +351,7 @@ main { animation: fade-in 400ms ease-out; }
   .reveal { opacity: 1; transform: none; }
   .lift:hover { transform: none; }
   main { animation: none; }
+  .toy { transform: translate3d(0, var(--py, 0px), 0) !important; }
+  .bg-mesh { animation: none; }
+  #cursor-halo { display: none; }
 }

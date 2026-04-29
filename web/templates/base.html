@@ -11,6 +11,11 @@
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E">
 
+  <!-- Google Fonts: Inter (display + body) + Space Grotesk (display accent) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
   <!-- Tailwind via Play CDN — fine for a portfolio piece; swap for a built css later if traffic warrants. -->
   <script src="https://cdn.tailwindcss.com?plugins=typography,forms"></script>
   <script>
@@ -18,28 +23,177 @@
       theme: {
         extend: {
           colors: {
-            ink: { 950: '#0a0a0f', 900: '#11121a', 800: '#1a1c26', 700: '#262833' },
+            ink: { 950: '#070713', 900: '#0d0d1f', 800: '#15152b', 700: '#22223b' },
             accent: { 500: '#10b981', 600: '#059669', 700: '#047857' },
+            cyan2:  { 400: '#22d3ee', 500: '#06b6d4' },
+            grape:  { 400: '#c084fc', 500: '#a855f7' },
+            rose2:  { 400: '#fb7185', 500: '#f43f5e' },
+            sun:    { 400: '#fbbf24', 500: '#f59e0b' },
           },
           fontFamily: {
-            sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'Inter', 'sans-serif'],
-            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
-          }
+            sans:    ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+            display: ['"Space Grotesk"', 'Inter', 'sans-serif'],
+            mono:    ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+          },
+          borderRadius: {
+            '4xl': '2rem',
+            '5xl': '2.5rem',
+          },
         }
       }
     };
   </script>
   <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
-  <link rel="stylesheet" href="/static/site.css">
+  <link rel="stylesheet" href="/static/site.css?v={{ static_version }}">
   {% block head_extra %}{% endblock %}
 </head>
-<body class="min-h-screen bg-ink-950 text-slate-100 font-sans antialiased">
-  <header class="sticky top-0 z-30 border-b border-ink-800/80 bg-ink-950/80 backdrop-blur">
+<body class="relative min-h-screen overflow-x-hidden bg-ink-950 text-slate-100 font-sans antialiased">
+
+  <!-- ============================================================ -->
+  <!--  GLOBAL ANIMATED BACKGROUND  ·  fixed, layered behind content  -->
+  <!-- ============================================================ -->
+  <div class="bg-mesh fixed inset-0 -z-10" aria-hidden="true"></div>
+
+  <!-- Floating toy stage — fixed, follows scroll via parallax JS below.
+       Toys are inline SVG so they're sharp at any scale and don't add a request. -->
+  <div id="toy-stage" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+
+    <!-- Robot (purple) -->
+    <svg class="toy toy-bob"     style="top: 8%;  left: 6%;  width: 70px;"  data-parallax="0.35" viewBox="0 0 64 64">
+      <defs>
+        <linearGradient id="g-bot1-a" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%"  stop-color="#a855f7"/>
+          <stop offset="100%" stop-color="#6366f1"/>
+        </linearGradient>
+      </defs>
+      <line x1="32" y1="4" x2="32" y2="14" stroke="#c084fc" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="32" cy="4" r="3" fill="#c084fc"/>
+      <rect x="14" y="14" width="36" height="32" rx="9" fill="url(#g-bot1-a)"/>
+      <circle cx="24" cy="28" r="3.2" fill="#fff"/>
+      <circle cx="40" cy="28" r="3.2" fill="#fff"/>
+      <circle cx="24" cy="28" r="1.4" fill="#0d0d1f"/>
+      <circle cx="40" cy="28" r="1.4" fill="#0d0d1f"/>
+      <rect x="24" y="37" width="16" height="3" rx="1.5" fill="#fff" opacity="0.55"/>
+      <rect x="20" y="48" width="24" height="7" rx="2.5" fill="#22223b"/>
+      <rect x="23" y="50" width="3" height="3" rx="0.8" fill="#22d3ee"/>
+      <rect x="29" y="50" width="3" height="3" rx="0.8" fill="#10b981"/>
+      <rect x="35" y="50" width="3" height="3" rx="0.8" fill="#fbbf24"/>
+    </svg>
+
+    <!-- Isometric cube (cyan/emerald) -->
+    <svg class="toy toy-spin-slow" style="top: 14%; right: 8%; width: 64px;" data-parallax="0.55" viewBox="0 0 64 64">
+      <defs>
+        <linearGradient id="g-cube-top" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"  stop-color="#22d3ee"/>
+          <stop offset="100%" stop-color="#10b981"/>
+        </linearGradient>
+        <linearGradient id="g-cube-left" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%"  stop-color="#06b6d4"/>
+          <stop offset="100%" stop-color="#047857"/>
+        </linearGradient>
+        <linearGradient id="g-cube-right" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%"  stop-color="#0e7490"/>
+          <stop offset="100%" stop-color="#064e3b"/>
+        </linearGradient>
+      </defs>
+      <polygon points="32,4 58,18 32,32 6,18"   fill="url(#g-cube-top)"/>
+      <polygon points="6,18 32,32 32,60 6,46"   fill="url(#g-cube-left)"/>
+      <polygon points="58,18 32,32 32,60 58,46" fill="url(#g-cube-right)"/>
+    </svg>
+
+    <!-- 4-point sparkle / star (yellow) -->
+    <svg class="toy toy-spin" style="top: 30%; left: 12%; width: 44px;" data-parallax="0.25" viewBox="0 0 64 64">
+      <defs>
+        <radialGradient id="g-star1" cx="0.5" cy="0.5" r="0.6">
+          <stop offset="0%"  stop-color="#fbbf24"/>
+          <stop offset="60%" stop-color="#f59e0b"/>
+          <stop offset="100%" stop-color="#b45309"/>
+        </radialGradient>
+      </defs>
+      <path d="M32 4 C34 22 42 30 60 32 C42 34 34 42 32 60 C30 42 22 34 4 32 C22 30 30 22 32 4 Z"
+            fill="url(#g-star1)"/>
+    </svg>
+
+    <!-- Planet with ring (rose) -->
+    <svg class="toy toy-bob-slow" style="top: 38%; right: 5%; width: 80px;" data-parallax="0.45" viewBox="0 0 80 80">
+      <defs>
+        <radialGradient id="g-planet" cx="0.35" cy="0.35" r="0.7">
+          <stop offset="0%"  stop-color="#fda4af"/>
+          <stop offset="60%" stop-color="#f43f5e"/>
+          <stop offset="100%" stop-color="#9f1239"/>
+        </radialGradient>
+      </defs>
+      <ellipse cx="40" cy="40" rx="34" ry="9" fill="none" stroke="#fb7185" stroke-width="2" opacity="0.55" transform="rotate(-18 40 40)"/>
+      <circle cx="40" cy="40" r="20" fill="url(#g-planet)"/>
+      <ellipse cx="40" cy="40" rx="34" ry="9" fill="none" stroke="#fda4af" stroke-width="1.5" opacity="0.85" transform="rotate(-18 40 40)" stroke-dasharray="2 4"/>
+    </svg>
+
+    <!-- Pill / capsule (emerald) -->
+    <svg class="toy toy-bob" style="top: 56%; left: 4%; width: 60px;" data-parallax="0.3" viewBox="0 0 80 32">
+      <defs>
+        <linearGradient id="g-pill1" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"  stop-color="#10b981"/>
+          <stop offset="50%" stop-color="#22d3ee"/>
+          <stop offset="100%" stop-color="#a855f7"/>
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="76" height="28" rx="14" fill="url(#g-pill1)"/>
+      <rect x="6" y="6" width="34" height="20" rx="10" fill="#fff" opacity="0.18"/>
+    </svg>
+
+    <!-- Donut / torus (purple → pink) -->
+    <svg class="toy toy-spin-rev" style="top: 64%; right: 12%; width: 60px;" data-parallax="0.5" viewBox="0 0 64 64">
+      <defs>
+        <linearGradient id="g-donut" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%"  stop-color="#a855f7"/>
+          <stop offset="100%" stop-color="#ec4899"/>
+        </linearGradient>
+      </defs>
+      <circle cx="32" cy="32" r="22" fill="none" stroke="url(#g-donut)" stroke-width="11"/>
+      <circle cx="32" cy="32" r="22" fill="none" stroke="#fff" stroke-width="2" stroke-opacity="0.4" stroke-dasharray="4 8"/>
+    </svg>
+
+    <!-- Bot 2 (cyan, smaller — second screen) -->
+    <svg class="toy toy-bob-slow" style="top: 86%; left: 18%; width: 54px;" data-parallax="0.4" viewBox="0 0 64 64">
+      <defs>
+        <linearGradient id="g-bot2" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%"  stop-color="#22d3ee"/>
+          <stop offset="100%" stop-color="#10b981"/>
+        </linearGradient>
+      </defs>
+      <line x1="32" y1="4" x2="32" y2="14" stroke="#5eead4" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="32" cy="4" r="3" fill="#5eead4"/>
+      <rect x="14" y="14" width="36" height="32" rx="9" fill="url(#g-bot2)"/>
+      <circle cx="24" cy="28" r="3.2" fill="#0d0d1f"/>
+      <circle cx="40" cy="28" r="3.2" fill="#0d0d1f"/>
+      <path d="M22 38 Q32 44 42 38" stroke="#0d0d1f" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <rect x="20" y="48" width="24" height="7" rx="2.5" fill="#0d0d1f"/>
+    </svg>
+
+    <!-- Cone / triangle (gradient) -->
+    <svg class="toy toy-spin-slow" style="top: 92%; right: 22%; width: 48px;" data-parallax="0.6" viewBox="0 0 64 64">
+      <defs>
+        <linearGradient id="g-cone" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"  stop-color="#fbbf24"/>
+          <stop offset="100%" stop-color="#f43f5e"/>
+        </linearGradient>
+      </defs>
+      <polygon points="32,4 58,56 6,56" fill="url(#g-cone)"/>
+      <polygon points="32,4 58,56 32,56" fill="#000" opacity="0.12"/>
+    </svg>
+  </div>
+
+  <!-- ============================================================ -->
+  <!--  HEADER  ·  glass nav                                          -->
+  <!-- ============================================================ -->
+  <header class="sticky top-0 z-30 border-b border-white/5 bg-ink-950/60 backdrop-blur-md">
     <nav class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-      <a href="/" class="flex items-center gap-2 font-semibold tracking-tight">
-        <span class="grid h-8 w-8 place-items-center rounded-lg bg-accent-600/20 text-accent-500">⚡</span>
+      <a href="/" class="flex items-center gap-2 font-display font-semibold tracking-tight">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-accent-500 via-cyan2-400 to-grape-500 text-white shadow-lg shadow-accent-500/30">
+          <span class="text-base">⚡</span>
+        </span>
         <span>LiveOps Agent</span>
-        <span class="ml-2 hidden rounded-full border border-ink-700 bg-ink-800 px-2 py-0.5 text-xs font-normal text-slate-300 sm:inline">demo</span>
+        <span class="ml-2 hidden rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs font-normal text-slate-300 sm:inline">demo</span>
       </a>
 
       <div class="hidden items-center gap-1 md:flex">
@@ -52,9 +206,9 @@
           <a href="{{ href }}"
              class="rounded-lg px-3 py-2 text-sm transition
                     {% if current_path == href %}
-                      bg-ink-800 text-white
+                      bg-white/10 text-white
                     {% else %}
-                      text-slate-300 hover:bg-ink-800 hover:text-white
+                      text-slate-300 hover:bg-white/5 hover:text-white
                     {% endif %}">
             {{ label }}
           </a>
@@ -62,12 +216,12 @@
         {% if username %}
           <a href="/dashboard"
              class="rounded-lg px-3 py-2 text-sm transition
-                    {% if current_path == '/dashboard' %}bg-ink-800 text-white{% else %}text-slate-300 hover:bg-ink-800 hover:text-white{% endif %}">
+                    {% if current_path == '/dashboard' %}bg-white/10 text-white{% else %}text-slate-300 hover:bg-white/5 hover:text-white{% endif %}">
             Dashboard
           </a>
           <a href="/run-agent"
              class="rounded-lg px-3 py-2 text-sm transition
-                    {% if current_path == '/run-agent' %}bg-ink-800 text-white{% else %}text-slate-300 hover:bg-ink-800 hover:text-white{% endif %}">
+                    {% if current_path == '/run-agent' %}bg-white/10 text-white{% else %}text-slate-300 hover:bg-white/5 hover:text-white{% endif %}">
             Run agent
           </a>
         {% endif %}
@@ -77,13 +231,14 @@
         {% if username %}
           <span class="hidden text-sm text-slate-400 sm:inline">@{{ username }}</span>
           <form action="/logout" method="post" class="contents">
-            <button class="rounded-lg border border-ink-700 px-3 py-1.5 text-sm text-slate-300 transition hover:border-ink-700 hover:bg-ink-800 hover:text-white">
+            <button class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white">
               Log out
             </button>
           </form>
         {% else %}
           <a href="/login" class="rounded-lg px-3 py-1.5 text-sm text-slate-300 hover:text-white">Log in</a>
-          <a href="/signup" class="rounded-lg bg-accent-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-500">
+          <a href="/signup"
+             class="lift glow-border rounded-lg bg-gradient-to-r from-accent-500 via-cyan2-500 to-grape-500 px-4 py-1.5 text-sm font-semibold text-white shadow-lg shadow-accent-500/30 transition">
             Sign up
           </a>
         {% endif %}
@@ -93,20 +248,20 @@
 
   {% if flash %}
     <div class="mx-auto mt-4 max-w-6xl px-4">
-      <div class="rounded-lg border px-4 py-3 text-sm
-        {% if flash.kind == 'success' %}border-accent-700 bg-accent-700/10 text-accent-500
-        {% elif flash.kind == 'error' %}border-rose-700 bg-rose-700/10 text-rose-300
-        {% else %}border-ink-700 bg-ink-800 text-slate-300{% endif %}">
+      <div class="glass rounded-xl px-4 py-3 text-sm
+        {% if flash.kind == 'success' %}border-accent-500/40 text-accent-500
+        {% elif flash.kind == 'error' %}border-rose2-500/40 text-rose2-400
+        {% else %}text-slate-300{% endif %}">
         {{ flash.message }}
       </div>
     </div>
   {% endif %}
 
-  <main class="mx-auto max-w-6xl px-4 py-10">
+  <main class="relative mx-auto max-w-6xl px-4 py-10">
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="mt-20 border-t border-ink-800/80">
+  <footer class="relative mt-20 border-t border-white/5">
     <div class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-3 px-4 py-6 text-sm text-slate-400 md:flex-row md:items-center">
       <div>
         Built by Sathwik · <a class="underline-offset-2 hover:text-white hover:underline" href="https://github.com/sathwikarr/liveops-agent">github.com/sathwikarr/liveops-agent</a>
@@ -120,7 +275,7 @@
   </footer>
   {% block body_extra %}{% endblock %}
 
-  <!-- Reveal-on-scroll + count-up. Vanilla JS, no framework dependency. -->
+  <!-- Reveal-on-scroll, count-up, parallax, cursor-follower. Vanilla JS. -->
   <script>
     (function () {
       var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -141,8 +296,7 @@
         revealEls.forEach(function (el) { io.observe(el); });
       }
 
-      // 2. Count-up for any [data-countup] number (e.g. "249", "55"). Triggers
-      //    when the element scrolls into view; runs once per element.
+      // 2. Count-up for [data-countup] number values
       function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
       function animateCount(el) {
         var target = parseFloat(el.getAttribute('data-countup'));
@@ -176,9 +330,65 @@
           });
         }, { threshold: 0.4 });
         counters.forEach(function (el) {
-          // pre-fill so SSR layout doesn't jump from 0 → real
           el.textContent = '0' + (el.getAttribute('data-suffix') || '');
           ioc.observe(el);
+        });
+      }
+
+      // 3. Parallax: each [data-parallax="0.4"] toy translates against scroll.
+      //    Higher value = moves faster against scroll (feels closer to camera).
+      if (!prefersReduced) {
+        var parallaxEls = document.querySelectorAll('[data-parallax]');
+        var lastY = 0;
+        var ticking = false;
+        function applyParallax() {
+          parallaxEls.forEach(function (el) {
+            var f = parseFloat(el.getAttribute('data-parallax')) || 0;
+            el.style.setProperty('--py', (-lastY * f) + 'px');
+          });
+          ticking = false;
+        }
+        window.addEventListener('scroll', function () {
+          lastY = window.scrollY;
+          if (!ticking) {
+            requestAnimationFrame(applyParallax);
+            ticking = true;
+          }
+        }, { passive: true });
+        applyParallax();
+      }
+
+      // 4. Cursor-follow halo on the hero (subtle, premium feel).
+      //    Only on devices with a fine pointer (skip touch).
+      if (!prefersReduced && window.matchMedia('(pointer: fine)').matches) {
+        var halo = document.getElementById('cursor-halo');
+        if (halo) {
+          var hx = window.innerWidth / 2, hy = 200;
+          var tx = hx, ty = hy;
+          window.addEventListener('mousemove', function (e) {
+            tx = e.clientX; ty = e.clientY;
+          }, { passive: true });
+          (function tick() {
+            hx += (tx - hx) * 0.08;
+            hy += (ty - hy) * 0.08;
+            halo.style.transform = 'translate3d(' + (hx - 200) + 'px,' + (hy - 200) + 'px,0)';
+            requestAnimationFrame(tick);
+          })();
+        }
+      }
+
+      // 5. Tilt effect on [data-tilt] cards. Subtle, ~6deg max.
+      if (!prefersReduced && window.matchMedia('(pointer: fine)').matches) {
+        document.querySelectorAll('[data-tilt]').forEach(function (card) {
+          card.addEventListener('mousemove', function (e) {
+            var r = card.getBoundingClientRect();
+            var x = (e.clientX - r.left) / r.width - 0.5;
+            var y = (e.clientY - r.top) / r.height - 0.5;
+            card.style.transform = 'translateY(-3px) rotateX(' + (-y * 6) + 'deg) rotateY(' + (x * 6) + 'deg)';
+          });
+          card.addEventListener('mouseleave', function () {
+            card.style.transform = '';
+          });
         });
       }
     })();
