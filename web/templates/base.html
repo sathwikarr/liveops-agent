@@ -238,6 +238,76 @@
         applyParallax();
       }
 
+      // 4. Typewriter cycler — rotates the words inside [data-cycler]. Type-in,
+      //    pause, type-out, swap, repeat. Single timeline per element, paused
+      //    while the tab is hidden so we don't keep churning offscreen.
+      if (!prefersReduced) {
+        document.querySelectorAll('[data-cycler]').forEach(function (root) {
+          var span = root.querySelector('.cycler-word');
+          if (!span) return;
+          var words;
+          try { words = JSON.parse(root.getAttribute('data-words') || '[]'); }
+          catch (e) { words = []; }
+          if (!words.length) return;
+          var idx = 0, ch = words[0].length, deleting = false;
+          function tick() {
+            if (document.hidden) { setTimeout(tick, 400); return; }
+            var w = words[idx];
+            ch = ch + (deleting ? -1 : 1);
+            ch = Math.max(0, Math.min(w.length, ch));
+            span.textContent = w.slice(0, ch);
+            var next = 38 + Math.random() * 32;            // typing
+            if (deleting) next = 22;                        // deleting (snappier)
+            if (!deleting && ch === w.length) { next = 1800; deleting = true; }
+            else if (deleting && ch === 0)    { next = 320;  deleting = false; idx = (idx + 1) % words.length; }
+            setTimeout(tick, next);
+          }
+          // Start with a brief hold on the first word for legibility.
+          setTimeout(tick, 1400);
+        });
+      }
+
+      // 5. Magnetic CTA — sets --mx / --my (clamped to ±4px) on pointer move.
+      //    Easing is handled in CSS via transition + cubic-bezier(0.16,1,0.3,1).
+      if (!prefersReduced && window.matchMedia('(pointer: fine)').matches) {
+        document.querySelectorAll('[data-magnetic]').forEach(function (el) {
+          var R = 4;       // max drift, in px — keep this subtle
+          var STR = 0.25;  // strength multiplier vs. cursor offset
+          el.addEventListener('pointermove', function (e) {
+            var r = el.getBoundingClientRect();
+            var dx = (e.clientX - (r.left + r.width / 2)) * STR;
+            var dy = (e.clientY - (r.top  + r.height / 2)) * STR;
+            dx = Math.max(-R, Math.min(R, dx));
+            dy = Math.max(-R, Math.min(R, dy));
+            el.style.setProperty('--mx', dx.toFixed(2) + 'px');
+            el.style.setProperty('--my', dy.toFixed(2) + 'px');
+          });
+          el.addEventListener('pointerleave', function () {
+            el.style.setProperty('--mx', '0px');
+            el.style.setProperty('--my', '0px');
+          });
+        });
+      }
+
+      // 6. Pipeline walk — when [data-pipeline-walk] enters the viewport, add
+      //    .is-walking once. CSS sequences a per-step glow with stagger.
+      var walkers = document.querySelectorAll('[data-pipeline-walk]');
+      if (walkers.length) {
+        if (prefersReduced || !('IntersectionObserver' in window)) {
+          // Skip the animation; let the static styling do its thing.
+        } else {
+          var iow = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('is-walking');
+                iow.unobserve(entry.target);
+              }
+            });
+          }, { threshold: 0.25 });
+          walkers.forEach(function (el) { iow.observe(el); });
+        }
+      }
+
       // (Cursor-halo and 3D card tilt removed — too playful.)
     })();
   </script>

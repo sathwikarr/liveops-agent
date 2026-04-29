@@ -33,7 +33,7 @@
         <label class="block text-sm font-medium text-slate-300">Username</label>
         <input name="username" required autocomplete="username" minlength="3" maxlength="32"
           pattern="[A-Za-z0-9_\-]{3,32}"
-          class="mt-1.5 block w-full rounded-md border border-white/10 bg-ink-950/60 px-3 py-2.5 text-sm placeholder-slate-600 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+          class="focus-ring mt-1.5 block w-full rounded-md border border-white/10 bg-ink-950/60 px-3 py-2.5 text-sm placeholder-slate-600"
           placeholder="3–32 chars, letters/digits/_/-">
       </div>
       <div>
@@ -41,19 +41,19 @@
         <input name="password" required type="password"
           autocomplete="{% if mode == 'signup' %}new-password{% else %}current-password{% endif %}"
           minlength="8"
-          class="mt-1.5 block w-full rounded-md border border-white/10 bg-ink-950/60 px-3 py-2.5 text-sm placeholder-slate-600 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+          class="focus-ring mt-1.5 block w-full rounded-md border border-white/10 bg-ink-950/60 px-3 py-2.5 text-sm placeholder-slate-600"
           placeholder="at least 8 characters">
       </div>
       {% if mode == 'signup' %}
         <div>
           <label class="block text-sm font-medium text-slate-300">Confirm password</label>
           <input name="confirm" type="password" required minlength="8"
-            class="mt-1.5 block w-full rounded-md border border-white/10 bg-ink-950/60 px-3 py-2.5 text-sm placeholder-slate-600 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500">
+            class="focus-ring mt-1.5 block w-full rounded-md border border-white/10 bg-ink-950/60 px-3 py-2.5 text-sm placeholder-slate-600">
         </div>
       {% endif %}
 
-      <button type="submit"
-        class="w-full rounded-md bg-accent-500 px-4 py-2.5 text-sm font-medium text-ink-950 shadow-sm transition hover:bg-accent-400">
+      <button type="submit" data-magnetic
+        class="magnetic w-full rounded-md bg-accent-500 px-4 py-2.5 text-sm font-medium text-ink-950 shadow-sm hover:bg-accent-400">
         {% if mode == 'signup' %}Create account{% else %}Log in{% endif %}
       </button>
     </form>

@@ -315,6 +315,138 @@ main { animation: fade-in 400ms ease-out; }
 }
 
 /* ========================================================================= *
+ * Phase 22 — Premium motion polish
+ * Linear / Vercel / Stripe vocabulary: tight spring curves, low-amplitude
+ * translates, a single colour pass. No bouncing, no rotating, no toys.
+ * ========================================================================= */
+
+/* ---- Spring easing tokens (single source of truth) ---- */
+:root {
+  --ease-spring:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-emphasis: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---- Tilt-spring: stronger lift than .lift, springier landing.
+       Use on premium cards where the user spends time reading.        ---- */
+.tilt-spring {
+  transition:
+    transform     360ms var(--ease-spring),
+    border-color  240ms ease,
+    box-shadow    360ms var(--ease-spring);
+  will-change: transform;
+}
+.tilt-spring:hover {
+  transform: translate3d(0, -2px, 0);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 12px 32px -18px rgba(16, 185, 129, 0.30),
+    0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+/* ---- Magnetic CTA — JS sets --mx / --my (-4..4 px); CSS handles the spring.
+       Defaults to 0 so the element sits still until JS hooks it up.   ---- */
+.magnetic {
+  transform: translate3d(var(--mx, 0px), var(--my, 0px), 0);
+  transition: transform 280ms var(--ease-spring), background-color 200ms ease;
+  will-change: transform;
+}
+
+/* ---- Typewriter cycler. JS swaps text on a 3.5s rotation; the cursor
+       blinks when the typist is "thinking", solid while typing.       ---- */
+.cycler {
+  position: relative;
+  display: inline-block;
+  min-width: 1ch;
+}
+.cycler-word {
+  display: inline-block;
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+  white-space: nowrap;
+}
+.cycler-caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  background: #10b981;
+  border-radius: 1px;
+  animation: blink 1.05s steps(1) infinite;
+}
+
+/* ---- Marquee strip — slow horizontal scroll with edge fade mask.
+       Track must be wide enough that the loop seam never shows.       ---- */
+@keyframes marquee-x {
+  from { transform: translate3d(0,    0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+.marquee {
+  position: relative;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+}
+.marquee-track {
+  display: inline-flex;
+  gap: 2.5rem;
+  white-space: nowrap;
+  animation: marquee-x 38s linear infinite;
+}
+.marquee:hover .marquee-track { animation-play-state: paused; }
+
+/* ---- SVG draw-on stroke. Pair with stroke-dasharray + stroke-dashoffset
+       set inline; CSS just animates dashoffset to 0.                  ---- */
+@keyframes draw-stroke {
+  to { stroke-dashoffset: 0; }
+}
+.draw-on {
+  stroke-dasharray: var(--len, 240);
+  stroke-dashoffset: var(--len, 240);
+  animation: draw-stroke 1400ms var(--ease-emphasis) 200ms forwards;
+}
+
+/* ---- Pipeline walk: when the section gets `.is-walking` (set by IO),
+       each .pipeline-step gets a one-shot emerald sweep with a stagger.
+       Pure transform/opacity — no layout work.                        ---- */
+@keyframes step-glow {
+  0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.0); }
+  35%  { box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.45),
+                     0 0 24px -2px rgba(16, 185, 129, 0.45); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.0); }
+}
+.pipeline-step { transition: transform 240ms var(--ease-spring); }
+.pipeline-strip.is-walking .pipeline-step {
+  animation: step-glow 900ms var(--ease-emphasis) both;
+}
+.pipeline-strip.is-walking .pipeline-step:nth-child(1) { animation-delay:   0ms; }
+.pipeline-strip.is-walking .pipeline-step:nth-child(2) { animation-delay: 120ms; }
+.pipeline-strip.is-walking .pipeline-step:nth-child(3) { animation-delay: 240ms; }
+.pipeline-strip.is-walking .pipeline-step:nth-child(4) { animation-delay: 360ms; }
+.pipeline-strip.is-walking .pipeline-step:nth-child(5) { animation-delay: 480ms; }
+.pipeline-strip.is-walking .pipeline-step:nth-child(6) { animation-delay: 600ms; }
+.pipeline-strip.is-walking .pipeline-step:nth-child(7) { animation-delay: 720ms; }
+.pipeline-strip.is-walking .pipeline-step:nth-child(8) { animation-delay: 840ms; }
+.pipeline-strip.is-walking .pipeline-step:nth-child(9) { animation-delay: 960ms; }
+
+/* ---- Animated focus ring on inputs / buttons. Uses the spring curve
+       and a soft emerald ring instead of the default browser blue.    ---- */
+.focus-ring {
+  transition: box-shadow 220ms var(--ease-spring),
+              border-color 220ms ease;
+}
+.focus-ring:focus,
+.focus-ring:focus-visible {
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.55);
+  box-shadow:
+    0 0 0 3px rgba(16, 185, 129, 0.18),
+    0 0 0 1px rgba(16, 185, 129, 0.45) inset;
+}
+
+/* ========================================================================= *
  * Reduced motion — honor it.
  * ========================================================================= */
 @media (prefers-reduced-motion: reduce) {
@@ -324,7 +456,13 @@ main { animation: fade-in 400ms ease-out; }
     transition-duration: 0.01ms !important;
   }
   .reveal { opacity: 1; transform: none; }
-  .lift:hover { transform: none; }
+  .lift:hover,
+  .tilt-spring:hover { transform: none; }
   main { animation: none; }
   .orb { animation: none; }
+  .marquee-track { animation: none; transform: none; }
+  .magnetic { transform: none; }
+  .draw-on { stroke-dashoffset: 0; animation: none; }
+  .pipeline-strip.is-walking .pipeline-step { animation: none; }
+  .cycler-caret { animation: none; opacity: 1; }
 }

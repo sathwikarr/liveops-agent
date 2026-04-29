@@ -14,8 +14,12 @@
       <span class="eyebrow">v0.4 · 268 tests passing</span>
 
       <h1 class="mt-5 font-display text-4xl font-semibold leading-[1.08] tracking-tight md:text-[3.25rem]">
-        An AI co-pilot for the
-        <span class="accent-text">boring ops work</span>
+        An AI co-pilot for
+        <span class="cycler" data-cycler
+              data-words='["boring ops work","the daily numbers","incident triage","retention triage"]'
+              aria-label="boring ops work, the daily numbers, incident triage, retention triage">
+          <span class="cycler-word">boring ops work</span><span class="cycler-caret" aria-hidden="true"></span>
+        </span>
         in retail teams.
       </h1>
 
@@ -25,8 +29,8 @@
       </p>
 
       <div class="mt-8 flex flex-wrap items-center gap-3">
-        <a href="/demo"
-           class="inline-flex items-center gap-2 rounded-md bg-accent-500 px-4 py-2.5 text-sm font-medium text-ink-950 shadow-sm transition hover:bg-accent-400">
+        <a href="/demo" data-magnetic
+           class="magnetic inline-flex items-center gap-2 rounded-md bg-accent-500 px-4 py-2.5 text-sm font-medium text-ink-950 shadow-sm hover:bg-accent-400">
           Try the demo
           <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
         </a>
@@ -94,6 +98,26 @@
       </div>
     {% endfor %}
   </div>
+
+  <!-- Tool marquee — slowly drifts the analyst tool registry across the page.
+       Track is duplicated so the loop seam never shows. -->
+  <div class="marquee mt-8" aria-hidden="true">
+    <div class="marquee-track font-mono text-xs uppercase tracking-[0.18em] text-slate-500">
+      {% set tool_names = [
+        'revenue_by_period', 'top_products', 'top_customers', 'segment_customers',
+        'product_quadrants', 'co_purchases', 'price_elasticity', 'churn_risk',
+        'cohort_retention', 'describe_columns'
+      ] %}
+      {% for _ in range(2) %}
+        {% for name in tool_names %}
+          <span class="inline-flex items-center gap-2">
+            <span class="h-1 w-1 rounded-full bg-accent-500/60"></span>
+            {{ name }}
+          </span>
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
 </section>
 
 <!-- ============================================================ -->
@@ -110,7 +134,7 @@
   </div>
 
   <div class="mt-10 grid gap-6 md:grid-cols-2">
-    <div class="reveal reveal-delay-1 lift glass rounded-xl p-7">
+    <div class="reveal reveal-delay-1 tilt-spring glass rounded-xl p-7">
       <div class="text-xs font-medium uppercase tracking-widest text-accent-400">Ops agent</div>
       <h3 class="mt-2 font-display text-lg font-semibold">Detect → Recommend → Act</h3>
       <p class="mt-2 text-sm leading-relaxed text-slate-400">
@@ -125,7 +149,7 @@
       </ul>
     </div>
 
-    <div class="reveal reveal-delay-2 lift glass rounded-xl p-7">
+    <div class="reveal reveal-delay-2 tilt-spring glass rounded-xl p-7">
       <div class="text-xs font-medium uppercase tracking-widest text-accent-400">Analyst workbench</div>
       <h3 class="mt-2 font-display text-lg font-semibold">Ten tools, eval-graded</h3>
       <p class="mt-2 text-sm leading-relaxed text-slate-400">
@@ -162,11 +186,22 @@
       <div class="flex items-center gap-10">
         {% if eval_baseline %}
           <div>
-            <div class="font-display text-4xl font-semibold tracking-tight"
-                 data-countup="{{ '%.1f'|format(eval_baseline.pass_rate * 100) }}"
-                 data-decimals="1"
-                 data-suffix="%">
-              {{ '%.1f'|format(eval_baseline.pass_rate * 100) }}%
+            <div class="flex items-end gap-3">
+              <div class="font-display text-4xl font-semibold tracking-tight"
+                   data-countup="{{ '%.1f'|format(eval_baseline.pass_rate * 100) }}"
+                   data-decimals="1"
+                   data-suffix="%">
+                {{ '%.1f'|format(eval_baseline.pass_rate * 100) }}%
+              </div>
+              <!-- Draw-on sparkline. Stylised pass-rate trend; the dasharray
+                   kicks the path to invisible, then animates to 0.            -->
+              <svg viewBox="0 0 88 28" class="mb-1.5 h-7 w-[88px]" fill="none"
+                   stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+                   aria-hidden="true">
+                <path class="draw-on text-accent-400" style="--len: 200"
+                      d="M2 22 L14 18 L24 20 L34 14 L46 16 L58 9 L70 11 L86 4"/>
+                <circle cx="86" cy="4" r="2" class="fill-accent-400 text-accent-400"/>
+              </svg>
             </div>
             <div class="mt-1 text-xs uppercase tracking-widest text-slate-500">pass rate</div>
           </div>
@@ -202,7 +237,7 @@
       Every stage is restartable, instrumented, and eval-checked.
     </p>
   </div>
-  <div class="mt-8 grid gap-3 text-sm md:grid-cols-3 lg:grid-cols-9">
+  <div class="pipeline-strip mt-8 grid gap-3 text-sm md:grid-cols-3 lg:grid-cols-9" data-pipeline-walk>
     {% set pipeline = [
       ('Ingest', 'CSV · Parquet · Postgres · S3 · Sheets'),
       ('Clean',  'Schema infer · null fill · type coerce'),
@@ -215,7 +250,7 @@
       ('Deploy', 'Docker · Render · GHCR'),
     ] %}
     {% for label, sub in pipeline %}
-      <div class="reveal reveal-delay-{{ loop.index }} lift glass rounded-lg p-3.5">
+      <div class="pipeline-step reveal reveal-delay-{{ loop.index }} lift glass rounded-lg p-3.5">
         <div class="flex items-baseline gap-1.5">
           <span class="font-mono text-[10px] text-slate-500">{{ '%02d'|format(loop.index) }}</span>
           <span class="font-display text-sm font-semibold">{{ label }}</span>
