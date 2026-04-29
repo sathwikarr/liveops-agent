@@ -3,8 +3,9 @@
 {% block title %}{{ 'Sign up' if mode == 'signup' else 'Log in' }} · LiveOps Agent{% endblock %}
 
 {% block content %}
-<div class="mx-auto max-w-md">
-  <div class="rounded-2xl border border-ink-800 bg-ink-900/40 p-6">
+<div class="relative mx-auto max-w-md">
+  <div class="bg-blobs" aria-hidden="true"></div>
+  <div class="relative rounded-2xl border border-ink-800 bg-ink-900/60 p-6 shadow-xl backdrop-blur hero-enter">
     <div class="flex border-b border-ink-800 text-sm font-medium">
       <a href="/login?next={{ next }}"
          class="-mb-px border-b-2 px-4 py-2 transition
@@ -45,7 +46,7 @@
       {% endif %}
 
       <button type="submit"
-        class="w-full rounded-lg bg-accent-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-500">
+        class="lift glow-border w-full rounded-lg bg-accent-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-500">
         {% if mode == 'signup' %}Create account{% else %}Log in{% endif %}
       </button>
     </form>

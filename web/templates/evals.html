@@ -13,9 +13,12 @@
     </p>
   </div>
   {% if baseline %}
-    <div class="rounded-2xl border border-ink-800 bg-ink-900/40 p-5 text-right">
+    <div class="lift rounded-2xl border border-ink-800 bg-ink-900/40 p-5 text-right hover:border-accent-700/40">
       <div class="text-xs uppercase tracking-wide text-slate-400">Pinned baseline</div>
-      <div class="mt-1 text-3xl font-semibold">{{ '%.1f'|format(baseline.pass_rate * 100) }}%</div>
+      <div class="mt-1 text-3xl font-semibold"
+           data-countup="{{ '%.1f'|format(baseline.pass_rate * 100) }}"
+           data-decimals="1"
+           data-suffix="%">{{ '%.1f'|format(baseline.pass_rate * 100) }}%</div>
       <div class="text-xs text-slate-400">{{ baseline.n_passed }} / {{ baseline.n_cases }} on backend = {{ baseline.backend }}</div>
     </div>
   {% endif %}
@@ -44,9 +47,11 @@
       </div>
 
       <button :disabled="running" @click="run()"
-        class="mt-5 w-full rounded-lg bg-accent-600 py-2 text-sm font-medium text-white transition hover:bg-accent-500 disabled:opacity-60">
+        class="lift glow-border mt-5 w-full rounded-lg bg-accent-600 py-2 text-sm font-medium text-white transition hover:bg-accent-500 disabled:opacity-60">
         <span x-show="!running">▶ Run evals</span>
-        <span x-show="running">Running…</span>
+        <span x-show="running" class="inline-flex items-center gap-2">
+          <span class="live-dot" aria-hidden="true"></span> Running…
+        </span>
       </button>
       <div x-show="running" class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-ink-800">
         <div class="h-full bg-accent-500 transition-all" :style="`width: ${progress}%`"></div>

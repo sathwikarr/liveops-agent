@@ -119,5 +119,69 @@
     </div>
   </footer>
   {% block body_extra %}{% endblock %}
+
+  <!-- Reveal-on-scroll + count-up. Vanilla JS, no framework dependency. -->
+  <script>
+    (function () {
+      var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // 1. Reveal-on-scroll for any element with .reveal
+      var revealEls = document.querySelectorAll('.reveal');
+      if (prefersReduced || !('IntersectionObserver' in window)) {
+        revealEls.forEach(function (el) { el.classList.add('is-visible'); });
+      } else {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              io.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+        revealEls.forEach(function (el) { io.observe(el); });
+      }
+
+      // 2. Count-up for any [data-countup] number (e.g. "249", "55"). Triggers
+      //    when the element scrolls into view; runs once per element.
+      function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+      function animateCount(el) {
+        var target = parseFloat(el.getAttribute('data-countup'));
+        if (isNaN(target)) return;
+        var decimals = (el.getAttribute('data-decimals') || '0') | 0;
+        var duration = parseInt(el.getAttribute('data-duration') || '1100', 10);
+        var suffix = el.getAttribute('data-suffix') || '';
+        var start = performance.now();
+        function tick(now) {
+          var p = Math.min(1, (now - start) / duration);
+          var v = target * easeOutCubic(p);
+          el.textContent = v.toFixed(decimals) + suffix;
+          if (p < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      }
+      var counters = document.querySelectorAll('[data-countup]');
+      if (prefersReduced || !('IntersectionObserver' in window)) {
+        counters.forEach(function (el) {
+          var t = parseFloat(el.getAttribute('data-countup'));
+          var d = (el.getAttribute('data-decimals') || '0') | 0;
+          el.textContent = t.toFixed(d) + (el.getAttribute('data-suffix') || '');
+        });
+      } else {
+        var ioc = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              animateCount(entry.target);
+              ioc.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.4 });
+        counters.forEach(function (el) {
+          // pre-fill so SSR layout doesn't jump from 0 → real
+          el.textContent = '0' + (el.getAttribute('data-suffix') || '');
+          ioc.observe(el);
+        });
+      }
+    })();
+  </script>
 </body>
 </html>

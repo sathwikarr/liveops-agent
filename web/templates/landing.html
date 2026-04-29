@@ -3,43 +3,52 @@
 {% block title %}LiveOps Agent — AI co-pilot for retail ops{% endblock %}
 
 {% block content %}
-<section class="grid items-center gap-10 md:grid-cols-5">
-  <div class="md:col-span-3">
-    <span class="inline-flex items-center gap-2 rounded-full border border-ink-700 bg-ink-800/60 px-3 py-1 text-xs text-slate-300">
-      <span class="h-2 w-2 rounded-full bg-accent-500"></span>
-      v0.4 · 249 tests passing · 55-case eval baseline pinned
-    </span>
-    <h1 class="mt-5 text-4xl font-bold tracking-tight md:text-5xl">
-      An AI agent that <span class="text-accent-500">does the boring ops work</span> for retail teams.
-    </h1>
-    <p class="mt-5 text-lg text-slate-300">
-      Ingest your orders &amp; customer data, score churn &amp; demand, recommend next actions,
-      then send Slack/email/Sheets — all evaluated against a 55-case test corpus so the
-      agent doesn't drift silently.
-    </p>
-    <div class="mt-7 flex flex-wrap gap-3">
-      <a href="/demo" class="rounded-lg bg-accent-600 px-5 py-2.5 font-medium text-white shadow-sm transition hover:bg-accent-500">
-        ▶ Try the demo
-      </a>
-      <a href="/workbench" class="rounded-lg border border-ink-700 bg-ink-800 px-5 py-2.5 font-medium text-slate-200 transition hover:border-ink-700 hover:bg-ink-700">
-        Open workbench
-      </a>
-      <a href="/evals" class="rounded-lg border border-ink-700 bg-ink-800 px-5 py-2.5 font-medium text-slate-200 transition hover:border-ink-700 hover:bg-ink-700">
-        See eval results →
-      </a>
-    </div>
-    <p class="mt-3 text-xs text-slate-500">No signup required to demo · ~5 sec to first answer</p>
-  </div>
+<!-- ============================================================ -->
+<!-- HERO  ·  animated background blobs + staggered entrance      -->
+<!-- ============================================================ -->
+<section class="relative">
+  <div class="bg-blobs" aria-hidden="true"></div>
 
-  <div class="md:col-span-2">
-    <div class="rounded-2xl border border-ink-800 bg-ink-900/60 p-1 shadow-xl">
-      <div class="flex items-center gap-1.5 px-3 py-2">
-        <span class="h-2.5 w-2.5 rounded-full bg-rose-500/70"></span>
-        <span class="h-2.5 w-2.5 rounded-full bg-amber-400/70"></span>
-        <span class="h-2.5 w-2.5 rounded-full bg-accent-500/70"></span>
-        <span class="ml-3 font-mono text-xs text-slate-500">$ liveops ask</span>
+  <div class="relative grid items-center gap-10 md:grid-cols-5">
+    <div class="md:col-span-3 hero-enter">
+      <span class="inline-flex items-center gap-2 rounded-full border border-ink-700 bg-ink-800/60 px-3 py-1 text-xs text-slate-300 backdrop-blur">
+        <span class="live-dot" aria-hidden="true"></span>
+        v0.4 · 268 tests passing · 55-case eval baseline pinned
+      </span>
+      <h1 class="mt-5 text-4xl font-bold tracking-tight md:text-5xl">
+        An AI agent that <span class="text-shimmer">does the boring ops work</span> for retail teams.
+      </h1>
+      <p class="mt-5 text-lg text-slate-300">
+        Ingest your orders &amp; customer data, score churn &amp; demand, recommend next actions,
+        then send Slack/email/Sheets — all evaluated against a 55-case test corpus so the
+        agent doesn't drift silently.
+      </p>
+      <div class="mt-7 flex flex-wrap gap-3">
+        <a href="/demo"
+           class="lift glow-border rounded-lg bg-accent-600 px-5 py-2.5 font-medium text-white shadow-sm transition hover:bg-accent-500">
+          ▶ Try the demo
+        </a>
+        <a href="/workbench"
+           class="lift rounded-lg border border-ink-700 bg-ink-800 px-5 py-2.5 font-medium text-slate-200 transition hover:border-accent-500/40 hover:bg-ink-700">
+          Open workbench
+        </a>
+        <a href="/evals"
+           class="lift rounded-lg border border-ink-700 bg-ink-800 px-5 py-2.5 font-medium text-slate-200 transition hover:border-accent-500/40 hover:bg-ink-700">
+          See eval results →
+        </a>
       </div>
-      <pre class="m-0 overflow-x-auto rounded-b-2xl bg-ink-950/80 p-5 font-mono text-xs leading-relaxed text-slate-300"><span class="text-slate-500">›</span> which 5 products bring in the most revenue?
+      <p class="mt-3 text-xs text-slate-500">No signup required to demo · ~5 sec to first answer</p>
+    </div>
+
+    <div class="md:col-span-2 hero-enter">
+      <div class="relative rounded-2xl border border-ink-800 bg-ink-900/60 p-1 shadow-xl backdrop-blur-sm">
+        <div class="flex items-center gap-1.5 px-3 py-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-rose-500/70"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-amber-400/70"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-accent-500/70"></span>
+          <span class="ml-3 font-mono text-xs text-slate-500">$ liveops ask</span>
+        </div>
+        <pre class="m-0 overflow-x-auto rounded-b-2xl bg-ink-950/80 p-5 font-mono text-xs leading-relaxed text-slate-300"><span class="text-slate-500">›</span> which 5 products bring in the most revenue?
 
 <span class="text-accent-500">plan</span>:  top_products(n=5)
 <span class="text-accent-500">trace</span>: top_products → 5 rows in 0.04s
@@ -53,30 +62,35 @@
 <span class="text-slate-500">›</span> which customers are about to churn?
 
 <span class="text-accent-500">plan</span>:  churn_risk(days=60)
-<span class="text-accent-500">trace</span>: 1,204 customers · 18% At-Risk · 7% Churned</pre>
+<span class="text-accent-500">trace</span><span class="cursor-blink">: 1,204 customers · 18% At-Risk · 7% Churned</span></pre>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- Headline numbers -->
+<!-- ============================================================ -->
+<!-- HEADLINE NUMBERS  ·  count-up on scroll                       -->
+<!-- ============================================================ -->
 <section class="mt-16 grid grid-cols-2 gap-3 md:grid-cols-4">
   {% set stats = [
-    ('249', 'tests passing'),
-    ('10', 'analyst tools'),
-    ('55', 'eval cases'),
-    ('4', 'data connectors'),
+    (268, 'tests passing'),
+    (10, 'analyst tools'),
+    (55, 'eval cases'),
+    (4, 'data connectors'),
   ] %}
   {% for v, lbl in stats %}
-    <div class="rounded-xl border border-ink-800 bg-ink-900/40 p-5">
-      <div class="text-3xl font-semibold tracking-tight">{{ v }}</div>
+    <div class="reveal reveal-delay-{{ loop.index }} lift rounded-xl border border-ink-800 bg-ink-900/40 p-5">
+      <div class="text-3xl font-semibold tracking-tight" data-countup="{{ v }}">{{ v }}</div>
       <div class="mt-1 text-sm text-slate-400">{{ lbl }}</div>
     </div>
   {% endfor %}
 </section>
 
-<!-- Two-vertical capability strip -->
+<!-- ============================================================ -->
+<!-- TWO-VERTICAL CAPABILITY STRIP                                 -->
+<!-- ============================================================ -->
 <section class="mt-20 grid gap-6 md:grid-cols-2">
-  <div class="rounded-2xl border border-ink-800 bg-ink-900/40 p-6">
+  <div class="reveal reveal-delay-1 lift rounded-2xl border border-ink-800 bg-ink-900/40 p-6 hover:border-accent-700/40">
     <div class="flex items-center gap-2 text-sm font-medium text-accent-500">
       <span>🤖</span> Ops agent
     </div>
@@ -94,7 +108,7 @@
     </ul>
   </div>
 
-  <div class="rounded-2xl border border-ink-800 bg-ink-900/40 p-6">
+  <div class="reveal reveal-delay-2 lift rounded-2xl border border-ink-800 bg-ink-900/40 p-6 hover:border-accent-700/40">
     <div class="flex items-center gap-2 text-sm font-medium text-accent-500">
       <span>🧪</span> Analyst workbench
     </div>
@@ -113,9 +127,11 @@
   </div>
 </section>
 
-<!-- Eval ribbon -->
-<section class="mt-16">
-  <div class="rounded-2xl border border-accent-700/40 bg-gradient-to-br from-accent-700/10 to-ink-900/40 p-8">
+<!-- ============================================================ -->
+<!-- EVAL RIBBON                                                   -->
+<!-- ============================================================ -->
+<section class="reveal mt-16">
+  <div class="rounded-2xl border border-accent-700/40 bg-gradient-to-br from-accent-700/10 via-ink-900/40 to-indigo-700/10 p-8">
     <div class="flex flex-wrap items-center justify-between gap-6">
       <div>
         <h2 class="text-xl font-semibold">📊 Pinned eval baseline</h2>
@@ -127,17 +143,25 @@
       <div class="flex items-center gap-6">
         {% if eval_baseline %}
           <div>
-            <div class="text-4xl font-semibold">{{ '%.1f'|format(eval_baseline.pass_rate * 100) }}%</div>
+            <div class="text-4xl font-semibold"
+                 data-countup="{{ '%.1f'|format(eval_baseline.pass_rate * 100) }}"
+                 data-decimals="1"
+                 data-suffix="%">
+              {{ '%.1f'|format(eval_baseline.pass_rate * 100) }}%
+            </div>
             <div class="text-xs uppercase tracking-wide text-slate-400">pass rate</div>
           </div>
           <div>
-            <div class="text-4xl font-semibold">{{ eval_baseline.n_passed }}/{{ eval_baseline.n_cases }}</div>
+            <div class="text-4xl font-semibold">
+              <span data-countup="{{ eval_baseline.n_passed }}">{{ eval_baseline.n_passed }}</span>/<span>{{ eval_baseline.n_cases }}</span>
+            </div>
             <div class="text-xs uppercase tracking-wide text-slate-400">cases</div>
           </div>
         {% else %}
           <div class="text-sm text-slate-400">Run /evals to pin a baseline.</div>
         {% endif %}
-        <a href="/evals" class="rounded-lg border border-accent-500/40 bg-accent-500/10 px-4 py-2 text-sm text-accent-500 hover:bg-accent-500/20">
+        <a href="/evals"
+           class="lift rounded-lg border border-accent-500/40 bg-accent-500/10 px-4 py-2 text-sm text-accent-500 transition hover:bg-accent-500/20">
           View harness →
         </a>
       </div>
@@ -145,9 +169,11 @@
   </div>
 </section>
 
-<!-- Architecture / pipeline strip -->
+<!-- ============================================================ -->
+<!-- PIPELINE STRIP  ·  staggered reveal                           -->
+<!-- ============================================================ -->
 <section class="mt-16">
-  <h2 class="text-xl font-semibold">The pipeline, end to end</h2>
+  <h2 class="reveal text-xl font-semibold">The pipeline, end to end</h2>
   <div class="mt-5 grid gap-3 text-sm md:grid-cols-9">
     {% set pipeline = [
       ('Ingest', 'CSV · Parquet · Postgres · S3 · Sheets'),
@@ -158,10 +184,10 @@
       ('Notify', 'Slack · email · Sheets'),
       ('Audit', 'Plan + obs trace persisted'),
       ('Eval', '55 cases on every PR'),
-      ('Deploy', 'Docker · Fly.io · GHCR'),
+      ('Deploy', 'Docker · Render · GHCR'),
     ] %}
     {% for label, sub in pipeline %}
-      <div class="rounded-xl border border-ink-800 bg-ink-900/40 p-3">
+      <div class="reveal reveal-delay-{{ loop.index }} lift rounded-xl border border-ink-800 bg-ink-900/40 p-3 hover:border-accent-700/40">
         <div class="text-sm font-medium">{{ loop.index }}. {{ label }}</div>
         <div class="mt-1 text-xs text-slate-400">{{ sub }}</div>
       </div>
@@ -169,20 +195,25 @@
   </div>
 </section>
 
-<!-- Final CTA -->
+<!-- ============================================================ -->
+<!-- FINAL CTA                                                     -->
+<!-- ============================================================ -->
 <section class="mt-20">
   <div class="grid gap-6 md:grid-cols-3">
-    <a href="/demo" class="group rounded-2xl border border-ink-800 bg-ink-900/40 p-6 transition hover:border-accent-700/40 hover:bg-ink-900/70">
+    <a href="/demo"
+       class="reveal reveal-delay-1 lift glow-border group rounded-2xl border border-ink-800 bg-ink-900/40 p-6 transition hover:border-accent-700/40 hover:bg-ink-900/70">
       <div class="text-sm font-medium text-accent-500">No signup</div>
       <div class="mt-1 text-lg font-semibold group-hover:text-white">Try the demo →</div>
       <div class="mt-2 text-sm text-slate-400">Bundled retail dataset, four KPIs, real numbers in &lt;2 sec.</div>
     </a>
-    <a href="/workbench" class="group rounded-2xl border border-ink-800 bg-ink-900/40 p-6 transition hover:border-accent-700/40 hover:bg-ink-900/70">
+    <a href="/workbench"
+       class="reveal reveal-delay-2 lift glow-border group rounded-2xl border border-ink-800 bg-ink-900/40 p-6 transition hover:border-accent-700/40 hover:bg-ink-900/70">
       <div class="text-sm font-medium text-accent-500">Anonymous</div>
       <div class="mt-1 text-lg font-semibold group-hover:text-white">Open the workbench →</div>
       <div class="mt-2 text-sm text-slate-400">Ask questions; watch the agent pick tools and run them.</div>
     </a>
-    <a href="/signup" class="group rounded-2xl border border-ink-800 bg-ink-900/40 p-6 transition hover:border-accent-700/40 hover:bg-ink-900/70">
+    <a href="/signup"
+       class="reveal reveal-delay-3 lift glow-border group rounded-2xl border border-ink-800 bg-ink-900/40 p-6 transition hover:border-accent-700/40 hover:bg-ink-900/70">
       <div class="text-sm font-medium text-accent-500">Persistent</div>
       <div class="mt-1 text-lg font-semibold group-hover:text-white">Sign up &amp; connect data →</div>
       <div class="mt-2 text-sm text-slate-400">Save connections, recommendations, and bandit feedback across sessions.</div>

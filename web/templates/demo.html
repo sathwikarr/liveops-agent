@@ -20,7 +20,7 @@
     ('Products', '{:,}'.format(kpi_products)),
   ] %}
   {% for label, value in kpis %}
-    <div class="rounded-xl border border-ink-800 bg-ink-900/40 p-5">
+    <div class="reveal reveal-delay-{{ loop.index }} lift rounded-xl border border-ink-800 bg-ink-900/40 p-5 hover:border-accent-700/40">
       <div class="text-xs uppercase tracking-wide text-slate-400">{{ label }}</div>
       <div class="mt-1 text-2xl font-semibold tracking-tight">{{ value }}</div>
     </div>
@@ -49,12 +49,14 @@
 </section>
 
 <section class="mt-10 grid gap-6 md:grid-cols-2">
-  <a href="/workbench" class="group rounded-2xl border border-ink-800 bg-ink-900/40 p-6 transition hover:border-accent-700/40 hover:bg-ink-900/70">
+  <a href="/workbench"
+     class="reveal reveal-delay-1 lift glow-border group rounded-2xl border border-ink-800 bg-ink-900/40 p-6 transition hover:border-accent-700/40 hover:bg-ink-900/70">
     <div class="text-sm font-medium text-accent-500">Next →</div>
     <div class="mt-1 text-lg font-semibold group-hover:text-white">Ask the agent a question</div>
     <div class="mt-2 text-sm text-slate-400">"top 5 products", "who is about to churn", "show me cohort retention".</div>
   </a>
-  <a href="/evals" class="group rounded-2xl border border-ink-800 bg-ink-900/40 p-6 transition hover:border-accent-700/40 hover:bg-ink-900/70">
+  <a href="/evals"
+     class="reveal reveal-delay-2 lift glow-border group rounded-2xl border border-ink-800 bg-ink-900/40 p-6 transition hover:border-accent-700/40 hover:bg-ink-900/70">
     <div class="text-sm font-medium text-accent-500">How honest is it?</div>
     <div class="mt-1 text-lg font-semibold group-hover:text-white">See the eval harness →</div>
     <div class="mt-2 text-sm text-slate-400">55 graded cases, pass rate pinned, regression-checked in CI.</div>
