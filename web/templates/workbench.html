@@ -14,7 +14,56 @@
   </p>
 </header>
 
-<div x-data="workbench()" class="grid gap-8 md:grid-cols-5">
+<div x-data="workbench()" x-init="init()" class="grid gap-8 md:grid-cols-5">
+
+  <!-- ============================================================ -->
+  <!-- ACTIVE DATASET CHIP + UPLOAD                                  -->
+  <!-- ============================================================ -->
+  <section class="md:col-span-5">
+    <div class="glass flex flex-wrap items-center justify-between gap-4 rounded-xl p-4">
+      <div class="flex items-center gap-3 text-sm">
+        <span class="grid h-9 w-9 place-items-center rounded-md border border-white/10 bg-white/[0.04]">
+          <svg viewBox="0 0 24 24" class="h-4 w-4 text-accent-400" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7h18M3 12h18M3 17h18"/>
+          </svg>
+        </span>
+        <div>
+          <div class="text-xs uppercase tracking-widest text-slate-500">
+            <span x-text="dataset.source === 'upload' ? 'your upload' : 'bundled dataset'"></span>
+          </div>
+          <div class="font-mono text-sm text-slate-200">
+            <span x-text="dataset.name"></span>
+            <span class="ml-2 text-slate-500"
+                  x-text="'· ' + dataset.n_rows.toLocaleString() + ' rows · ' + dataset.n_cols + ' cols'"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <label class="cursor-pointer rounded-md border border-white/10 bg-white/[0.03] px-3.5 py-2 text-sm text-slate-200 transition hover:border-white/20 hover:bg-white/[0.06]"
+               :class="uploading ? 'opacity-60' : ''">
+          <span x-show="!uploading">Upload CSV</span>
+          <span x-show="uploading">Uploading…</span>
+          <input type="file" class="hidden"
+                 accept=".csv,.csv.gz,.parquet,text/csv"
+                 @change="upload($event.target.files[0])" :disabled="uploading">
+        </label>
+        <button x-show="dataset.source === 'upload'" type="button"
+                @click="reset()"
+                class="rounded-md border border-white/10 bg-white/[0.03] px-3.5 py-2 text-sm text-slate-300 transition hover:border-rose2-500/40 hover:text-rose2-400">
+          Reset to bundled
+        </button>
+      </div>
+    </div>
+    <template x-if="uploadError">
+      <div class="mt-2 rounded-md border border-rose2-500/40 bg-rose2-500/5 px-3 py-2 text-xs text-rose2-400"
+           x-text="uploadError"></div>
+    </template>
+    <p class="mt-2 text-[11px] text-slate-500">
+      CSV / Parquet up to 5 MB. Must include an order-date column and an amount column. Uploads live in your session and disappear after a few hours.
+    </p>
+  </section>
 
   <!-- Ask box + answer -->
   <section class="md:col-span-3">
@@ -139,6 +188,11 @@
       loading: false,
       error: null,
       result: null,
+      // Server-rendered seed; subsequent uploads patch it client-side so the
+      // chip stays in sync without a full reload.
+      dataset: {{ dataset|tojson }},
+      uploading: false,
+      uploadError: null,
       examples: [
         'top 5 products by revenue',
         'who is about to churn?',
@@ -147,6 +201,9 @@
         'what segments do my customers fall into?',
         'best-selling skus',
       ],
+      init() {
+        // No-op for now; reserved for future preview prefetch.
+      },
       summarise(r) {
         if (r && typeof r === 'object' && 'error' in r) return 'error';
         if (Array.isArray(r)) return r.length + ' rows';
@@ -166,6 +223,35 @@
           this.result = await res.json();
         } catch (e) { this.error = e.message; }
         finally { this.loading = false; }
+      },
+      async upload(file) {
+        if (!file) return;
+        this.uploading = true; this.uploadError = null;
+        try {
+          const fd = new FormData();
+          fd.append('file', file);
+          const res = await fetch('/api/workbench/upload', { method: 'POST', body: fd });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            // FastAPI errors come back as { detail: "..." }
+            throw new Error(body.detail || ('HTTP ' + res.status));
+          }
+          this.dataset = body.dataset;
+          this.result = null;        // stale relative to the new dataset
+        } catch (e) {
+          this.uploadError = e.message;
+        } finally {
+          this.uploading = false;
+        }
+      },
+      async reset() {
+        try {
+          const res = await fetch('/api/workbench/reset', { method: 'POST' });
+          const body = await res.json();
+          if (!res.ok) throw new Error('reset failed');
+          this.dataset = body.dataset;
+          this.result = null;
+        } catch (e) { this.uploadError = e.message; }
       },
     };
   }

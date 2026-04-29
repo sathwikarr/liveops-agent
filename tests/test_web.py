@@ -230,3 +230,93 @@ def test_api_workbench_tool_dispatch(client):
 def test_api_workbench_tool_unknown(client):
     r = client.post("/api/workbench/tool", json={"tool": "does_not_exist"})
     assert r.status_code == 400
+
+
+# --------------------------------------------------------------------------- #
+# Workbench upload + reset
+# --------------------------------------------------------------------------- #
+
+def _mini_orders_csv() -> bytes:
+    """Smallest possible valid orders CSV — has the two required role keys
+    (date + amount) and enough columns to be useful."""
+    return (
+        b"order_id,customer_id,product_id,order_date,amount,quantity,region,channel\n"
+        b"O1,C1,SKU-001,2025-12-01,42.50,1,NA-East,web\n"
+        b"O2,C2,SKU-002,2025-12-02,17.00,2,EMEA,mobile\n"
+        b"O3,C1,SKU-001,2025-12-03,42.50,1,NA-East,web\n"
+        b"O4,C3,SKU-003,2025-12-04,99.99,1,APAC,retail\n"
+    )
+
+
+def test_workbench_upload_happy_path(client, tmp_path, monkeypatch):
+    monkeypatch.setenv("LIVEOPS_UPLOAD_DIR", str(tmp_path / "uploads"))
+    # Recreate app so the env override is picked up.
+    from web.server import create_app
+    from fastapi.testclient import TestClient
+    app = create_app()
+    with TestClient(app) as c:
+        r = c.post(
+            "/api/workbench/upload",
+            files={"file": ("my_orders.csv", _mini_orders_csv(), "text/csv")},
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["ok"] is True
+        assert body["dataset"]["source"] == "upload"
+        assert body["dataset"]["n_rows"] == 4
+        assert body["dataset"]["name"] == "my_orders.csv"
+        assert "amount" in body["role_map"] and "date" in body["role_map"]
+
+        # Subsequent /api/workbench/preview should return the uploaded data.
+        r2 = c.get("/api/workbench/preview")
+        assert r2.status_code == 200
+        assert r2.json()["n_rows"] == 4
+        assert r2.json()["dataset"]["source"] == "upload"
+
+        # Agent ask now runs against the uploaded frame.
+        r3 = c.post("/api/agent/ask",
+                    json={"question": "top 5 products by revenue",
+                          "backend": "heuristic"})
+        assert r3.status_code == 200
+
+        # Reset → back to bundled.
+        r4 = c.post("/api/workbench/reset")
+        assert r4.status_code == 200
+        assert r4.json()["dataset"]["source"] == "bundled"
+        r5 = c.get("/api/workbench/preview")
+        assert r5.json()["dataset"]["source"] == "bundled"
+
+
+def test_workbench_upload_rejects_bad_extension(client):
+    r = client.post(
+        "/api/workbench/upload",
+        files={"file": ("notes.txt", b"hello world", "text/plain")},
+    )
+    assert r.status_code == 400
+    assert "must be one of" in r.json()["detail"]
+
+
+def test_workbench_upload_rejects_missing_required_column(client):
+    # No date column -> should fail schema validation.
+    body = b"customer_id,product_id,amount\nC1,SKU-001,42.50\n"
+    r = client.post(
+        "/api/workbench/upload",
+        files={"file": ("bad.csv", body, "text/csv")},
+    )
+    assert r.status_code == 400
+    assert "missing required column" in r.json()["detail"]
+
+
+def test_workbench_upload_rejects_empty_file(client):
+    r = client.post(
+        "/api/workbench/upload",
+        files={"file": ("empty.csv", b"", "text/csv")},
+    )
+    assert r.status_code == 400
+
+
+def test_workbench_page_shows_dataset_chip(client):
+    """The bundled-dataset chip should render server-side on first load."""
+    r = client.get("/workbench")
+    assert r.status_code == 200
+    assert "bundled dataset" in r.text.lower() or "retail_orders.csv" in r.text
