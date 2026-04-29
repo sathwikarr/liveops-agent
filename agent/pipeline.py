@@ -10,6 +10,7 @@ here in Phase 15 when the Streamlit pages were retired.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -22,9 +23,13 @@ from agent.memory import save_anomaly_log
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_COLS = {"region", "product_id", "orders", "inventory", "revenue"}
 
+# Where per-user CSV uploads live. Override with LIVEOPS_USER_DATA so prod
+# (Fly.io) can point this onto the persisted volume at /app/data/user_data.
+USER_DATA_DIR = Path(os.getenv("LIVEOPS_USER_DATA", str(REPO_ROOT / "user_data")))
+
 
 def _user_csv_path(username: str) -> Path:
-    return REPO_ROOT / "user_data" / f"{username}.csv"
+    return USER_DATA_DIR / f"{username}.csv"
 
 
 def run_pipeline(

@@ -29,9 +29,8 @@ if str(REPO_ROOT) not in sys.path:
 load_dotenv(find_dotenv(), override=False)
 
 from agent import db  # noqa: E402
+from agent.pipeline import USER_DATA_DIR as USER_DATA  # noqa: E402
 from agent.pipeline import run_pipeline  # noqa: E402
-
-USER_DATA = REPO_ROOT / "user_data"
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",

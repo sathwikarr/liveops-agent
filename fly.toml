@@ -18,6 +18,10 @@ primary_region = "iad"
 [env]
   PORT = "8000"
   HOST = "0.0.0.0"
+  # Pin SQLite + per-user CSVs onto the mounted Fly volume so they survive
+  # machine restarts. The volume is mounted at /app/data (see [[mounts]] below).
+  LIVEOPS_DB = "/app/data/liveops.sqlite3"
+  LIVEOPS_USER_DATA = "/app/data/user_data"
   # SESSION_SECRET should be set via `fly secrets set SESSION_SECRET=...` so
   # signed cookies survive deploys. A random key is used if unset (rotates on boot).
 

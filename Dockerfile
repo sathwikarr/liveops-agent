@@ -67,7 +67,9 @@ RUN pip install --upgrade pip \
 COPY --chown=appuser:appuser . .
 
 # Persist DB + user uploads under /app/data — mount as a volume in prod.
-RUN mkdir -p /app/data /app/user_data \
+# On Fly, LIVEOPS_DB and LIVEOPS_USER_DATA both resolve under /app/data
+# (see fly.toml [env]) so a single volume covers both.
+RUN mkdir -p /app/data/user_data /app/user_data \
     && chown -R appuser:appuser /app/data /app/user_data
 VOLUME ["/app/data", "/app/user_data"]
 
@@ -77,7 +79,9 @@ EXPOSE 8000
 
 # Healthcheck pings the FastAPI /healthz endpoint.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -fsS http://localhost:8000/healthz || exit 1
+    CMD curl -fsS "http://localhost:${PORT:-8000}/healthz" || exit 1
 
-# Default = the FastAPI website. Override CMD to run auto_agent.py instead.
-CMD ["uvicorn", "web.server:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+# Default = the FastAPI website. Shell form so $PORT is substituted at runtime
+# — Fly sets PORT=8000, Render assigns a dynamic port, local fallback is 8000.
+# Override CMD to run auto_agent.py instead.
+CMD uvicorn web.server:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers

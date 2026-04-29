@@ -1,0 +1,30 @@
+# render.yaml — Render.com deploy config (free tier).
+#
+# After committing this file, go to https://dashboard.render.com/new/blueprint,
+# pick this repo, and Render will auto-create the service from this spec.
+#
+# Free tier caveats:
+#   - Service sleeps after 15 min of inactivity (~30s cold start on next hit).
+#   - No persistent disk → SQLite resets on every redeploy. The /demo and /evals
+#     routes work fine without persistence; signup-based features rebuild from
+#     scratch on each deploy.
+
+services:
+  - type: web
+    name: liveops-agent
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /healthz
+    envVars:
+      # Render injects PORT automatically — Dockerfile CMD reads $PORT.
+      - key: SESSION_SECRET
+        generateValue: true   # Render generates + persists a random secret on first deploy.
+      - key: HOST
+        value: 0.0.0.0
+      # Optional — set in the Render dashboard, not committed:
+      #   GEMINI_API_KEY   — enables real LLM explanations (otherwise stub fallback)
+      #   SLACK_WEBHOOK    — enables Slack notifications on critical anomalies
+      #   ANALYST_CONN_KEY — enables encrypted connector secrets in Workbench
