@@ -189,6 +189,61 @@ def test_api_agent_ask_validates(client):
     assert r.status_code == 400
 
 
+def test_api_agent_ask_rejects_unknown_backend(client):
+    r = client.post("/api/agent/ask", json={"question": "x", "backend": "rumour"})
+    assert r.status_code == 400
+    assert "backend must be" in r.json()["detail"]
+
+
+def test_api_agent_ask_returns_backend_meta_no_fallback(client):
+    """Heuristic-on-heuristic — no fallback, reason should be None."""
+    r = client.post("/api/agent/ask",
+                    json={"question": "top 5 products", "backend": "heuristic"})
+    body = r.json()
+    meta = body["backend_meta"]
+    assert meta["requested"] == "heuristic"
+    assert meta["actual"]    == "heuristic"
+    assert meta["fallback"]  is False
+    assert meta["info"]      is False
+    assert meta["reason"]    is None
+
+
+def test_api_agent_ask_backend_meta_signals_fallback(client, monkeypatch):
+    """When LLM is requested but the planner returns None, response must
+    flag fallback=True and include a user-readable reason string."""
+    # Force _llm_plan to return None so the agent always falls back.
+    import analyst.agent as agent_mod
+    monkeypatch.setattr(agent_mod, "_llm_plan", lambda *a, **kw: None)
+    # Pretend the LLM IS available so the reason discriminates "call failed"
+    # from "key missing".
+    monkeypatch.setattr(agent_mod, "_llm_available", lambda: True)
+
+    r = client.post("/api/agent/ask",
+                    json={"question": "top 5 products", "backend": "llm"})
+    meta = r.json()["backend_meta"]
+    assert meta["requested"] == "llm"
+    assert meta["actual"]    == "heuristic"
+    assert meta["fallback"]  is True
+    assert "LLM call failed" in meta["reason"]
+
+
+def test_api_agent_ask_backend_meta_when_key_missing(client, monkeypatch):
+    """auto + llm-not-available -> info=True, reason cites missing key."""
+    import analyst.agent as agent_mod
+    monkeypatch.setattr(agent_mod, "_llm_plan",      lambda *a, **kw: None)
+    monkeypatch.setattr(agent_mod, "_llm_available", lambda: False)
+
+    r = client.post("/api/agent/ask",
+                    json={"question": "top 5 products", "backend": "auto"})
+    meta = r.json()["backend_meta"]
+    assert meta["requested"]     == "auto"
+    assert meta["actual"]        == "heuristic"
+    assert meta["info"]          is True
+    assert meta["fallback"]      is False
+    assert meta["llm_available"] is False
+    assert "GEMINI_API_KEY" in meta["reason"]
+
+
 def test_api_evals_baseline(client):
     r = client.get("/api/evals/baseline")
     assert r.status_code == 200
@@ -304,7 +359,49 @@ def test_workbench_upload_rejects_missing_required_column(client):
         files={"file": ("bad.csv", body, "text/csv")},
     )
     assert r.status_code == 400
-    assert "missing required column" in r.json()["detail"]
+    detail = r.json()["detail"]
+    assert "missing required column" in detail
+    # The helpful hint should mention some accepted spellings.
+    assert "order_date" in detail or "transaction_date" in detail
+
+
+@pytest.mark.parametrize("body, expected_role_keys", [
+    # Title-Case + spaces
+    (b'"Order Date","Customer","Product","Sales","Qty"\n2025-12-01,C1,P1,42.50,1\n',
+     {"date", "amount", "customer", "product", "quantity"}),
+    # Synonyms a real customer CSV might use
+    (b"order_id,client_id,sku_code,date_of_order,gross_amount\n1,C1,P1,2025-12-01,42.50\n",
+     {"date", "amount", "customer", "product"}),
+    # Mixed casing, parens, and 'Created At' for the date
+    (b"OrderID,User Id,Product Code,Created At,Total Amount,Units\n1,U1,P1,2025-12-01,99.99,3\n",
+     {"date", "amount", "customer", "product", "quantity"}),
+    # camelCase headers
+    (b"orderId,customerId,productId,orderDate,amount\n1,C1,P1,2025-12-01,42.50\n",
+     {"date", "amount", "customer", "product"}),
+])
+def test_workbench_upload_accepts_real_world_headers(client, body, expected_role_keys):
+    """The audit found real-world CSVs were rejected because the alias
+    dictionary was too narrow.  These four variants are the kinds of headers
+    a customer dump actually has — none should bounce."""
+    r = client.post(
+        "/api/workbench/upload",
+        files={"file": ("real.csv", body, "text/csv")},
+    )
+    assert r.status_code == 200, r.text
+    role_map = r.json()["role_map"]
+    assert expected_role_keys.issubset(role_map.keys()), \
+        f"missing roles: expected {expected_role_keys}, got {set(role_map)}"
+
+
+def test_normalize_header_unit():
+    """Sanity check on the header normalizer we rely on for upload sanity."""
+    from web.server import _normalize_header
+    assert _normalize_header("Order Date")        == "order_date"
+    assert _normalize_header("Sales (USD)")       == "sales_usd"
+    assert _normalize_header("  CustomerID  ")    == "customerid"
+    assert _normalize_header("date_of_order")     == "date_of_order"
+    assert _normalize_header("Order ID #")        == "order_id"
+    assert _normalize_header("---weird---")       == "weird"
 
 
 def test_workbench_upload_rejects_empty_file(client):

@@ -44,7 +44,14 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 SAMPLE_CSV = REPO_ROOT / "analyst" / "sample_data" / "retail_orders.csv"
-EVAL_BASELINE = REPO_ROOT / "tests" / "fixtures" / "eval_baseline.json"
+
+# Eval baselines: the main 55-case corpus + the 14-case holdout split that the
+# heuristic was NOT tuned on. We surface ALL THREE numbers in the UI — pinning
+# only the 100% main number was the credibility hole the audit flagged.
+EVAL_FIXTURES = REPO_ROOT / "tests" / "fixtures"
+EVAL_BASELINE              = EVAL_FIXTURES / "eval_baseline.json"
+EVAL_HOLDOUT_HEURISTIC     = EVAL_FIXTURES / "eval_holdout_baseline_heuristic.json"
+EVAL_HOLDOUT_LLM           = EVAL_FIXTURES / "eval_holdout_baseline_llm.json"
 
 # Per-session uploaded datasets. Lives on local disk; on Render's free tier
 # this dies with the dyno (acceptable for a session-scoped feature).
@@ -232,7 +239,8 @@ def _register_routes(app: FastAPI) -> None:
     @app.get("/", response_class=HTMLResponse)
     async def landing(request: Request):
         return _render(request, "landing.html",
-                       eval_baseline=_load_baseline_summary())
+                       eval_baseline=_load_baseline_summary(),
+                       eval_baselines=_load_eval_baselines())
 
     @app.get("/demo", response_class=HTMLResponse)
     async def demo(request: Request):
@@ -265,11 +273,14 @@ def _register_routes(app: FastAPI) -> None:
 
     @app.get("/evals", response_class=HTMLResponse)
     async def evals_page(request: Request):
-        from analyst.evals import ALL_CASES
+        from analyst.evals import ALL_CASES, HOLDOUT_CASES
         all_tags = sorted({t for c in ALL_CASES for t in c.tags})
         return _render(request, "evals.html",
-                       n_cases=len(ALL_CASES), tags=all_tags,
-                       baseline=_load_baseline_summary())
+                       n_cases=len(ALL_CASES),
+                       n_holdout_cases=len(HOLDOUT_CASES),
+                       tags=all_tags,
+                       baseline=_load_baseline_summary(),
+                       baselines=_load_eval_baselines())
 
     # ---- auth ----------------------------------------------------------- #
     @app.get("/login", response_class=HTMLResponse)
@@ -348,14 +359,22 @@ def _register_routes(app: FastAPI) -> None:
     @app.post("/api/agent/ask", response_class=JSONResponse)
     async def api_agent_ask(request: Request, payload: Dict[str, Any] = Body(...)):
         question = (payload.get("question") or "").strip()
-        backend = payload.get("backend") or "heuristic"
+        backend  = payload.get("backend") or "heuristic"
         if not question:
             raise HTTPException(400, "question is required")
+        if backend not in ("heuristic", "llm", "auto"):
+            raise HTTPException(400, f"backend must be one of heuristic|llm|auto (got {backend!r})")
         df = _active_df(request)
-        from analyst.agent import ask
+        from analyst.agent import ask, _llm_available
         rm = _default_role_map(df)
         result = ask(question, df, role_map=rm, backend=backend)
-        return _json_safe(result.to_dict())
+        body = result.to_dict()
+        body["backend_meta"] = _backend_meta(
+            requested=backend,
+            actual=body.get("plan", {}).get("backend", "heuristic"),
+            llm_available=_llm_available(),
+        )
+        return _json_safe(body)
 
     @app.post("/api/evals/run", response_class=JSONResponse)
     async def api_evals_run(payload: Dict[str, Any] = Body(default={})):
@@ -443,6 +462,11 @@ def _register_routes(app: FastAPI) -> None:
         if len(df) == 0:
             raise HTTPException(400, "file parsed but contains 0 rows")
 
+        # Normalize headers BEFORE validation so 'Order Date', 'Sales (USD)'
+        # etc. resolve to canonical snake_case and the alias dictionary works.
+        original_columns = list(df.columns)
+        df = _normalize_columns(df)
+
         # Schema validation: must be able to infer at minimum date + amount.
         rm = _default_role_map(df)
         missing = [k for k in UPLOAD_REQUIRED if k not in rm]
@@ -450,7 +474,10 @@ def _register_routes(app: FastAPI) -> None:
             raise HTTPException(
                 400,
                 f"missing required column(s) for: {missing}. "
-                f"detected columns: {list(df.columns)}"
+                f"got columns: {original_columns}. "
+                f"hint: a column for each of {missing} must exist (we accept many "
+                f"common spellings — e.g. 'order_date'/'date'/'transaction_date' "
+                f"for date, 'amount'/'sales'/'gross_revenue'/'order_total' for amount)."
             )
 
         # Persist to disk, atomic-ish (write to .tmp then rename).
@@ -503,21 +530,106 @@ def _register_routes(app: FastAPI) -> None:
 # Misc helpers reused from the old Streamlit code path
 # --------------------------------------------------------------------------- #
 
+# Column-alias dictionary used to infer the role of each uploaded column.
+# Keep these EXHAUSTIVE — every entry here is a header we promise to recognise
+# without requiring the user to rename anything.  Comparison is done after
+# `_normalize_header` (lowercase + alphanumeric+underscore only), so add the
+# normalized form, e.g. "ordered quantity" → "ordered_quantity".
+_ROLE_ALIASES: Dict[str, tuple[str, ...]] = {
+    "customer": (
+        "customer_id", "customer", "customerid", "user_id", "user", "userid",
+        "client_id", "client", "clientid", "account_id", "account",
+        "buyer_id", "buyer", "member_id", "member", "shopper_id", "shopper",
+    ),
+    "date": (
+        "order_date", "orderdate", "date", "timestamp", "created_at", "createdat",
+        "date_of_order", "transaction_date", "txn_date", "txndate",
+        "purchase_date", "order_dt", "order_datetime", "order_time",
+        "occurred_at", "event_date", "event_time", "ts",
+    ),
+    "amount": (
+        "revenue", "amount", "total", "price_total", "sales", "sales_amount",
+        "gross_amount", "gross_revenue", "gross", "net_amount", "net",
+        "total_amount", "value", "subtotal", "line_total", "order_value",
+        "order_total", "transaction_amount", "spend",
+    ),
+    "product": (
+        "product_id", "productid", "product", "sku", "skus", "item", "item_id",
+        "itemid", "product_code", "productcode", "sku_code", "skucode",
+        "item_code", "itemcode", "product_name", "productname", "prod_id",
+    ),
+    "quantity": (
+        "quantity", "qty", "units", "count", "num_items", "item_count",
+        "ordered_quantity", "order_qty", "qty_ordered",
+    ),
+    "price": (
+        "price", "unit_price", "unitprice", "list_price", "price_each",
+        "item_price", "itemprice", "unit_cost",
+    ),
+    "region": (
+        "region", "country", "market", "area", "geo", "zone", "territory",
+        "locale", "state", "country_code",
+    ),
+}
+
+
+def _normalize_header(name: str) -> str:
+    """Map a raw column name to its canonical form for alias lookup.
+
+    'Order Date' → 'order_date'; 'Sales (USD)' → 'sales_usd'.  Lowercases,
+    replaces every non-alphanumeric run with a single underscore, strips
+    leading/trailing underscores."""
+    return re.sub(r"_+", "_", re.sub(r"[^a-z0-9]+", "_", name.strip().lower())).strip("_")
+
+
+def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Return a copy of `df` with column names normalized.  Original headers
+    are dropped — the renamed frame is what gets persisted on upload."""
+    new_cols, seen = [], set()
+    for c in df.columns:
+        n = _normalize_header(str(c)) or "col"
+        # Disambiguate duplicates after normalization, e.g. two "Sales" cols.
+        candidate, i = n, 1
+        while candidate in seen:
+            i += 1
+            candidate = f"{n}_{i}"
+        seen.add(candidate)
+        new_cols.append(candidate)
+    out = df.copy()
+    out.columns = new_cols
+    return out
+
+
 def _default_role_map(df: pd.DataFrame) -> Dict[str, str]:
-    """Best-effort column inference. Mirrors analyst.evals.runner._default_role_map_for
-    but avoids importing it so /api/workbench/* keeps working even if evals
-    package is restructured."""
-    cols = {c.lower(): c for c in df.columns}
-    pick = lambda *names: next((cols[n] for n in names if n in cols), None)
-    out = {
-        "customer": pick("customer_id", "customer", "user_id"),
-        "date":     pick("order_date", "date", "timestamp", "created_at"),
-        "amount":   pick("revenue", "amount", "total", "price_total"),
-        "product":  pick("product_id", "product", "sku", "item"),
-        "quantity": pick("quantity", "qty", "units"),
-        "price":    pick("price", "unit_price"),
-        "region":   pick("region", "country", "market"),
-    }
+    """Infer which uploaded column plays each analytic role (date, amount,
+    customer, product, quantity, price, region).
+
+    Two-pass match: exact alias on the normalized header, then fall back to
+    'normalized header contains the alias as a whole token' so 'order_date_utc'
+    still resolves to date even though it's not an exact alias.
+    """
+    # Build {normalized_header: original_header} so we can return originals.
+    norm_to_orig = {_normalize_header(str(c)): c for c in df.columns}
+
+    def _pick(role_key: str) -> Optional[str]:
+        aliases = _ROLE_ALIASES[role_key]
+        # Pass 1 — exact match
+        for a in aliases:
+            if a in norm_to_orig:
+                return norm_to_orig[a]
+        # Pass 2 — whole-token containment (split norm header on '_' and check)
+        for norm, orig in norm_to_orig.items():
+            tokens = norm.split("_")
+            for a in aliases:
+                a_tokens = a.split("_")
+                # Require all alias tokens to appear as substrings of the
+                # normalized header in order — keeps 'shopper_id' from
+                # accidentally matching 'product_id'.
+                if all(t in tokens for t in a_tokens):
+                    return orig
+        return None
+
+    out = {role: _pick(role) for role in _ROLE_ALIASES}
     return {k: v for k, v in out.items() if v}
 
 
@@ -536,6 +648,40 @@ def _json_safe(obj: Any) -> Any:
     return obj
 
 
+def _backend_meta(*, requested: str, actual: str,
+                  llm_available: bool) -> Dict[str, Any]:
+    """Describe the requested-vs-actual backend pair so the workbench UI can
+    surface a banner instead of silently downgrading the user's choice.
+
+    The "reason" string is a short, user-facing explanation — not a stack
+    trace. We only need to distinguish three cases for the UI:
+      1. user got what they asked for → no banner
+      2. user asked for llm but heuristic ran → why? (key missing vs. call failed)
+      3. user picked auto and got heuristic → informational, not a warning
+    """
+    fallback = (requested == "llm" and actual != "llm")
+    info     = (requested == "auto" and actual != "llm")  # expected, but worth noting
+
+    if fallback or info:
+        if not llm_available:
+            reason = ("LLM backend isn't configured on this server "
+                      "(no GEMINI_API_KEY). Heuristic ran instead.")
+        else:
+            reason = ("LLM call failed (network, quota, or response-parse "
+                      "error). Heuristic ran instead.")
+    else:
+        reason = None
+
+    return {
+        "requested":     requested,
+        "actual":        actual,
+        "llm_available": bool(llm_available),
+        "fallback":      bool(fallback),
+        "info":          bool(info),
+        "reason":        reason,
+    }
+
+
 def _load_baseline_summary() -> Optional[Dict[str, Any]]:
     if not EVAL_BASELINE.exists():
         return None
@@ -543,6 +689,23 @@ def _load_baseline_summary() -> Optional[Dict[str, Any]]:
         return json.loads(EVAL_BASELINE.read_text())
     except Exception:
         return None
+
+
+def _load_eval_baselines() -> Dict[str, Optional[Dict[str, Any]]]:
+    """Return all three pinned baselines so the UI can tell the honest dual-
+    baseline story (main 100% / holdout heuristic 7.1% / holdout llm 28.6%)."""
+    def _read(p: Path) -> Optional[Dict[str, Any]]:
+        if not p.exists():
+            return None
+        try:
+            return json.loads(p.read_text())
+        except Exception:
+            return None
+    return {
+        "main":              _read(EVAL_BASELINE),
+        "holdout_heuristic": _read(EVAL_HOLDOUT_HEURISTIC),
+        "holdout_llm":       _read(EVAL_HOLDOUT_LLM),
+    }
 
 
 # Convenient module-level app for `uvicorn web.server:app`

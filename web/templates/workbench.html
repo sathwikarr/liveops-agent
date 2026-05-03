@@ -102,6 +102,32 @@
 
     <template x-if="result">
       <div class="mt-6 space-y-5">
+        <!-- Backend fallback banner: surfaces when the backend the user
+             requested (e.g. LLM) couldn't run and we silently fell back. -->
+        <template x-if="result.backend_meta && result.backend_meta.reason">
+          <div :class="result.backend_meta.fallback
+                       ? 'border-amber-500/40 bg-amber-500/[0.08] text-amber-300'
+                       : 'border-white/10 bg-white/[0.03] text-slate-300'"
+               class="glass flex items-start gap-3 rounded-md border p-4 text-sm">
+            <svg viewBox="0 0 24 24" class="mt-0.5 h-4 w-4 flex-shrink-0" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 9v4M12 17h.01"/>
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            </svg>
+            <div class="grow">
+              <div class="font-medium">
+                <span x-text="result.backend_meta.fallback ? 'Backend fallback' : 'Heads-up'"></span>
+              </div>
+              <div class="mt-0.5 text-[13px] leading-relaxed opacity-90"
+                   x-text="result.backend_meta.reason"></div>
+              <div class="mt-1 text-xs opacity-70">
+                Requested: <code class="font-mono" x-text="result.backend_meta.requested"></code> ·
+                Ran on: <code class="font-mono" x-text="result.backend_meta.actual"></code>
+              </div>
+            </div>
+          </div>
+        </template>
+
         <!-- Answer -->
         <div class="glass rounded-xl p-6">
           <div class="text-xs uppercase tracking-widest text-accent-400">Answer</div>

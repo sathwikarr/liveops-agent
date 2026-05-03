@@ -240,62 +240,104 @@ class AgentResult:
 # Heuristic planner — keyword routing
 # --------------------------------------------------------------------------- #
 
-# Each pattern → (tool_name, args). Order matters: more-specific first.
-_HEURISTIC_PATTERNS: List[tuple[str, str, Dict[str, Any]]] = [
-    # Retention — match churn/churning/churned via \w*
-    (r"\b(churn\w*|leaving|inactive|retention risk)\b", "churn_risk", {}),
+# Each pattern → (tool_name, default_args, friendly_intent). Order matters:
+# more-specific first. The `friendly_intent` is the user-facing prose that
+# becomes the plan step's `why` — never expose raw regex to the workbench.
+_HEURISTIC_PATTERNS: List[tuple[str, str, Dict[str, Any], str]] = [
+    # Retention
+    (r"\b(churn\w*|leaving|inactive|retention risk)\b",
+     "churn_risk", {},
+     "score every customer for churn risk based on recency"),
     (r"\b(cohort\w*|monthly retention|retention curve|retention decay|retention by signup)\b",
-     "cohort_retention", {}),
-    # Pricing — also catch "price-sensitive", "pricing power", "demand drop when ... price"
+     "cohort_retention", {},
+     "build the signup-cohort retention curve, month by month"),
+    # Pricing
     (r"\b(elasticity|elastic|price[\s-]?sensitiv\w*|pricing power|how price[\s-]?sensitive|"
      r"demand\s+drops?\s+when\s+(i\s+)?(raise|increase)\s+(the\s+)?prices?)\b",
-     "price_elasticity", {}),
+     "price_elasticity", {},
+     "estimate how demand responds to price changes"),
     # Basket
     (r"\b(co.?purchas\w*|basket\w*|frequently bought|bundle\w*|cross.?sell\w*)\b",
-     "co_purchases", {}),
-    # BCG quadrants — accept plurals + "question mark(s)"
+     "co_purchases", {},
+     "find the strongest product co-purchase pairs"),
+    # BCG quadrants
     (r"\b(quadrants?|stars?|cash\s+cows?|dog\s+products?|bcg|question\s+marks?)\b",
-     "product_quadrants", {}),
-    # RFM/segments — \w* lets "segment", "segments", "segmentation" through
-    (r"\b(segment\w*|rfm|champion\w*|loyal(ty)?|at-?risk)\b", "segment_customers", {}),
-    # Top customers — also "biggest spenders" / "highest paying customers" / "best customer"
+     "product_quadrants", {},
+     "place each SKU into a BCG quadrant by share × growth"),
+    # RFM/segments
+    (r"\b(segment\w*|rfm|champion\w*|loyal(ty)?|at-?risk)\b",
+     "segment_customers", {},
+     "bucket customers into RFM segments (Champions, Loyal, At-Risk, Lost…)"),
+    # Top customers
     (r"\b(?:top|best|biggest|highest)\s+(\d+)?\s*"
      r"(?:customer\w*|spender\w*|paying\s+customer\w*)\b",
-     "top_customers", {}),
-    # Top products — also "best-selling", "Which N products bring in the most..."
+     "top_customers", {},
+     "rank customers by total revenue"),
+    # Top products
     (r"\b(?:best.?selling|top|best|biggest)\s+(\d+)?\s*(?:products?|skus?)\b",
-     "top_products", {}),
-    (r"\bwhich\s+(\d+)\s+(?:products?|skus?)\b", "top_products", {}),
-    # Revenue cadence — daily/monthly/weekly fall through to weekly default
-    (r"\b(daily|by day)\b.*revenue|revenue.*\b(daily|by day)\b", "revenue_by_period", {"freq": "D"}),
+     "top_products", {},
+     "rank SKUs by total revenue"),
+    (r"\bwhich\s+(\d+)\s+(?:products?|skus?)\b",
+     "top_products", {},
+     "rank SKUs by total revenue"),
+    # Revenue cadence
+    (r"\b(daily|by day)\b.*revenue|revenue.*\b(daily|by day)\b",
+     "revenue_by_period", {"freq": "D"},
+     "aggregate revenue by day"),
     (r"\b(monthly|by month)\b.*\b(revenue|sales)\b|\b(revenue|sales)\b.*\b(monthly|by month)\b",
-     "revenue_by_period", {"freq": "M"}),
-    (r"\b(weekly|by week|trend|over time)\b", "revenue_by_period", {"freq": "W"}),
-    (r"\b(revenue|sales)\b", "revenue_by_period", {"freq": "W"}),
+     "revenue_by_period", {"freq": "M"},
+     "aggregate revenue by month"),
+    (r"\b(weekly|by week|trend|over time)\b",
+     "revenue_by_period", {"freq": "W"},
+     "aggregate revenue by week to show the trend"),
+    (r"\b(revenue|sales)\b",
+     "revenue_by_period", {"freq": "W"},
+     "aggregate revenue by week (default cadence)"),
     # Schema
     (r"\b(schema|columns?|what.* in (the|my) (data|dataset)|describe.*columns?)\b",
-     "describe_columns", {}),
+     "describe_columns", {},
+     "list the columns in the dataset with their dtypes"),
 ]
 
 
 def _heuristic_plan(question: str) -> Plan:
+    """Keyword-route a question to one or more tools.
+
+    Each step's `why` field is composed user-facing prose — it MUST be safe to
+    render directly in the workbench. No regex literals, no internal jargon.
+    """
     q = question.lower()
     steps: List[PlanStep] = []
     seen = set()
-    for pattern, tool, default_args in _HEURISTIC_PATTERNS:
+    for pattern, tool, default_args, intent in _HEURISTIC_PATTERNS:
         m = re.search(pattern, q)
-        if m and tool not in seen:
-            args = dict(default_args)
-            # Pull out a number if the pattern captured one
-            for grp in m.groups():
-                if grp and grp.isdigit():
-                    args["n"] = int(grp)
-                    break
-            steps.append(PlanStep(tool=tool, args=args, why=f"matched /{pattern}/"))
-            seen.add(tool)
+        if not (m and tool not in seen):
+            continue
+        args = dict(default_args)
+        # Pull out a number if the pattern captured one (e.g. "top 5 products")
+        for grp in m.groups():
+            if grp and grp.isdigit():
+                args["n"] = int(grp)
+                break
+        # Build the human "why":
+        #   You said "top 5 products" → rank SKUs by total revenue (n=5).
+        trigger = m.group(0).strip()
+        arg_bits = []
+        if "n"    in args: arg_bits.append(f"n={args['n']}")
+        if "freq" in args: arg_bits.append({"D": "daily", "W": "weekly", "M": "monthly"}
+                                            .get(args["freq"], args["freq"]))
+        suffix = f" ({', '.join(arg_bits)})" if arg_bits else ""
+        why = f'You said "{trigger}" → {intent}{suffix}.'
+        steps.append(PlanStep(tool=tool, args=args, why=why))
+        seen.add(tool)
+
     if not steps:
-        steps.append(PlanStep(tool="describe_columns", args={},
-                              why="fallback — no keyword matched, describe schema"))
+        steps.append(PlanStep(
+            tool="describe_columns", args={},
+            why="No keyword in your question matched a tool, so I'm describing "
+                "the dataset's columns instead — try rephrasing with words like "
+                "'revenue', 'top products', 'churn', 'segments', etc.",
+        ))
     return Plan(steps=steps,
                 reasoning="Keyword routing — no LLM available.",
                 backend="heuristic")

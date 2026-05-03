@@ -3,27 +3,79 @@
 {% block title %}Evals · LiveOps Agent{% endblock %}
 
 {% block content %}
-<header class="mb-10 flex flex-wrap items-end justify-between gap-6 hero-enter">
-  <div>
-    <span class="eyebrow">eval harness · public</span>
-    <h1 class="mt-3 font-display text-4xl font-semibold tracking-tight md:text-5xl">
-      {{ n_cases }} cases × 10 tools, <span class="accent-text">scored four ways.</span>
-    </h1>
-    <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-slate-400">
-      Tool-match, args-match, no-forbidden, must-succeed. Pass on tool-match ≥ 0.5 and clean must-succeed.
-      CI fails on any &gt; 2pp regression vs. the pinned baseline.
-    </p>
-  </div>
-  {% if baseline %}
-    <div class="glass rounded-xl p-6 text-right">
-      <div class="text-xs uppercase tracking-widest text-slate-400">Pinned baseline</div>
-      <div class="mt-2 font-display text-4xl font-semibold text-white"
-           data-countup="{{ '%.1f'|format(baseline.pass_rate * 100) }}"
-           data-decimals="1"
-           data-suffix="%">{{ '%.1f'|format(baseline.pass_rate * 100) }}%</div>
-      <div class="text-xs text-slate-500">{{ baseline.n_passed }} / {{ baseline.n_cases }} on backend = {{ baseline.backend }}</div>
+<header class="mb-10 hero-enter">
+  <span class="eyebrow">eval harness · public</span>
+  <h1 class="mt-3 font-display text-4xl font-semibold tracking-tight md:text-5xl">
+    {{ n_cases }} cases × 10 tools, <span class="accent-text">scored four ways.</span>
+  </h1>
+  <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-slate-400">
+    Tool-match, args-match, no-forbidden, must-succeed. Pass on tool-match ≥ 0.5 and clean must-succeed.
+    CI fails on any &gt; 2pp regression vs. the pinned baseline.
+  </p>
+
+  <!-- Honest dual-baseline. The 100% number alone is misleading; the holdout
+       paraphrases the heuristic was never tuned on are the real signal. -->
+  {% set _b = baselines %}
+  <div class="mt-8 grid gap-px overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] md:grid-cols-3">
+
+    <div class="bg-ink-900/60 p-6">
+      <div class="flex items-center justify-between">
+        <span class="text-xs uppercase tracking-widest text-slate-500">main · heuristic</span>
+        <span class="rounded-md border border-accent-500/30 bg-accent-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-accent-400">tuned</span>
+      </div>
+      {% if _b and _b.main %}
+        <div class="mt-3 font-display text-4xl font-semibold tracking-tight text-white"
+             data-countup="{{ '%.1f'|format(_b.main.pass_rate * 100) }}" data-decimals="1" data-suffix="%">
+          {{ '%.1f'|format(_b.main.pass_rate * 100) }}%
+        </div>
+        <div class="mt-1 text-xs text-slate-500">{{ _b.main.n_passed }} / {{ _b.main.n_cases }} cases · {{ _b.main.backend }}</div>
+      {% else %}
+        <div class="mt-3 text-sm text-slate-400">Not pinned</div>
+      {% endif %}
+      <p class="mt-3 text-xs leading-relaxed text-slate-400">
+        Regression-catcher. The heuristic regex was tuned on these exact phrasings, so the number moves only when something genuinely breaks.
+      </p>
     </div>
-  {% endif %}
+
+    <div class="bg-ink-900/60 p-6">
+      <div class="flex items-center justify-between">
+        <span class="text-xs uppercase tracking-widest text-slate-500">holdout · heuristic</span>
+        <span class="rounded-md border border-rose2-500/40 bg-rose2-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-rose2-400">novel</span>
+      </div>
+      {% if _b and _b.holdout_heuristic %}
+        <div class="mt-3 font-display text-4xl font-semibold tracking-tight text-rose2-400"
+             data-countup="{{ '%.1f'|format(_b.holdout_heuristic.pass_rate * 100) }}" data-decimals="1" data-suffix="%">
+          {{ '%.1f'|format(_b.holdout_heuristic.pass_rate * 100) }}%
+        </div>
+        <div class="mt-1 text-xs text-slate-500">{{ _b.holdout_heuristic.n_passed }} / {{ _b.holdout_heuristic.n_cases }} paraphrases</div>
+      {% else %}
+        <div class="mt-3 text-sm text-slate-400">Not pinned</div>
+      {% endif %}
+      <p class="mt-3 text-xs leading-relaxed text-slate-400">
+        Paraphrases like <em>"identify my whales"</em> or <em>"bucket my buyers"</em> — none of the regex's keywords appear. The heuristic falls off a cliff.
+      </p>
+    </div>
+
+    <div class="bg-ink-900/60 p-6">
+      <div class="flex items-center justify-between">
+        <span class="text-xs uppercase tracking-widest text-slate-500">holdout · LLM</span>
+        <span class="rounded-md border border-indigo2-500/40 bg-indigo2-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-indigo2-400">generalization</span>
+      </div>
+      {% if _b and _b.holdout_llm %}
+        <div class="mt-3 font-display text-4xl font-semibold tracking-tight text-indigo2-400"
+             data-countup="{{ '%.1f'|format(_b.holdout_llm.pass_rate * 100) }}" data-decimals="1" data-suffix="%">
+          {{ '%.1f'|format(_b.holdout_llm.pass_rate * 100) }}%
+        </div>
+        <div class="mt-1 text-xs text-slate-500">{{ _b.holdout_llm.n_passed }} / {{ _b.holdout_llm.n_cases }} paraphrases</div>
+      {% else %}
+        <div class="mt-3 text-sm text-slate-400">Not pinned</div>
+      {% endif %}
+      <p class="mt-3 text-xs leading-relaxed text-slate-400">
+        Same paraphrases through Gemini. ~4× the heuristic — meaningful generalization, with room to grow on prompt tuning.
+      </p>
+    </div>
+
+  </div>
 </header>
 
 <div x-data="evalRunner()" class="grid gap-8 md:grid-cols-5">

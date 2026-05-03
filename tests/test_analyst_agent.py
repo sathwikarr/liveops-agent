@@ -188,6 +188,51 @@ def test_ask_serializes_to_dict(retail_df, role_map):
     assert d["plan"]["backend"] == "heuristic"
 
 
+# --------------------------------------------------------------------------- #
+# Plan `why` strings must be user-facing prose, not raw regex
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.parametrize("question, expect_in_why", [
+    ("top 5 products by revenue",  ('rank SKUs by total revenue', 'n=5')),
+    ("who is about to churn?",     ('churn risk',)),
+    ("show me cohort retention",   ('signup-cohort retention curve',)),
+    ("rfm segments",               ('RFM segments',)),
+    ("product quadrants",          ('BCG quadrant',)),
+    ("are my customers price sensitive?", ('demand', 'price')),
+    ("weekly revenue trend",       ('aggregate revenue by week', 'weekly')),
+    ("monthly revenue",            ('aggregate revenue by month', 'monthly')),
+    ("best 3 customers",           ('rank customers', 'n=3')),
+    ("frequently bought together", ('co-purchase',)),
+    ("describe columns",           ('list the columns',)),
+])
+def test_heuristic_why_is_user_prose(retail_df, role_map, question, expect_in_why):
+    """The plan step's `why` field is rendered directly in the workbench UI.
+    It MUST read as English to a non-developer — no regex literals, no
+    internal jargon. This regression test catches a future refactor that
+    accidentally surfaces /\\b(?:foo|bar)\\b/ to users."""
+    plan = AG._heuristic_plan(question)
+    whys = " | ".join(s.why for s in plan.steps)
+    # Negative assertions — none of the regex artefacts should leak through.
+    for forbidden in ("matched /", "\\b", "\\w", "(?:", "(?P<"):
+        assert forbidden not in whys, f"regex artefact {forbidden!r} leaked into why: {whys!r}"
+    # Positive — the friendly intent fragments must be present somewhere.
+    for needle in expect_in_why:
+        assert needle.lower() in whys.lower(), \
+            f"expected {needle!r} in any step's why for {question!r}, got {whys!r}"
+
+
+def test_heuristic_garbage_query_helpful_fallback():
+    """Garbage queries route to describe_columns with a helpful 'try
+    rephrasing' message, not the old terse 'fallback' string."""
+    plan = AG._heuristic_plan("asdfghjk qwertyu")
+    assert len(plan.steps) == 1
+    why = plan.steps[0].why
+    assert "describing the dataset's columns" in why
+    assert "try rephrasing" in why
+    # Must mention at least one concrete keyword to nudge the user
+    assert any(kw in why.lower() for kw in ("revenue", "churn", "products"))
+
+
 def test_executor_swallows_tool_exceptions():
     """If a tool raises, the executor must capture it as an error observation
     rather than letting the exception bubble up."""
