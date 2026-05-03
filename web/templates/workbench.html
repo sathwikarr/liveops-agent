@@ -129,6 +129,26 @@
           </ol>
         </div>
 
+        <!-- Charts (rendered for chartable observations) -->
+        <template x-if="hasCharts(result)">
+          <div class="glass rounded-xl p-6">
+            <div class="text-xs uppercase tracking-widest text-slate-400">Visuals</div>
+            <div class="mt-4 space-y-6">
+              <template x-for="(obs, i) in result.observations" :key="'chart-' + i">
+                <div x-show="isChartable(obs)">
+                  <div class="mb-2 flex items-baseline justify-between">
+                    <code class="font-mono text-xs text-accent-400" x-text="obs.tool"></code>
+                    <span class="text-[11px] text-slate-500" x-text="chartCaption(obs)"></span>
+                  </div>
+                  <div class="rounded-md border border-white/5 bg-ink-950/40 p-3">
+                    <canvas :id="'chart-' + i" class="!h-[260px] !w-full"></canvas>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
         <!-- Observations -->
         <div class="glass rounded-xl p-6">
           <div class="text-xs uppercase tracking-widest text-slate-400">Observations</div>
@@ -210,8 +230,11 @@
         if (r && typeof r === 'object') return Object.keys(r).length + ' keys';
         return typeof r;
       },
+      _charts: {},  // { canvasId: Chart instance }
       async ask() {
-        this.error = null; this.result = null;
+        this.error = null;
+        this._destroyCharts();
+        this.result = null;
         if (!this.question.trim()) { this.error = 'Type a question first.'; return; }
         this.loading = true;
         try {
@@ -221,8 +244,197 @@
           });
           if (!res.ok) throw new Error('HTTP ' + res.status);
           this.result = await res.json();
+          // Wait for x-for canvases to mount, then render Chart.js into each.
+          this.$nextTick(() => this.renderCharts());
         } catch (e) { this.error = e.message; }
         finally { this.loading = false; }
+      },
+
+      // ---- Chart helpers ------------------------------------------------ //
+      hasCharts(result) {
+        if (!result || !result.observations) return false;
+        return result.observations.some(o => this.isChartable(o));
+      },
+      isChartable(obs) {
+        return Boolean(this._chartConfig(obs));
+      },
+      chartCaption(obs) {
+        const r = obs.result;
+        if (Array.isArray(r)) return r.length + ' rows';
+        if (r && typeof r === 'object') return Object.keys(r).length + ' keys';
+        return '';
+      },
+      _destroyCharts() {
+        Object.values(this._charts).forEach(c => { try { c.destroy(); } catch (e) {} });
+        this._charts = {};
+      },
+      renderCharts() {
+        if (typeof Chart === 'undefined' || !this.result) return;
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+        Chart.defaults.font.family = "Inter, ui-sans-serif, system-ui, sans-serif";
+        this.result.observations.forEach((obs, i) => {
+          const cfg = this._chartConfig(obs);
+          if (!cfg) return;
+          const el = document.getElementById('chart-' + i);
+          if (!el) return;
+          this._charts['chart-' + i] = new Chart(el.getContext('2d'), cfg);
+        });
+      },
+
+      // Decide which Chart.js config (if any) fits this observation.
+      // Returns a full Chart.js config object, or null if not chartable.
+      _chartConfig(obs) {
+        const r = obs.result;
+        if (!r || (Array.isArray(r) && r.length === 0)) return null;
+        if (r && typeof r === 'object' && 'error' in r) return null;
+        const tool = obs.tool;
+        const emerald = '#10b981', emeraldSoft = 'rgba(16,185,129,0.18)';
+        const indigo  = '#6366f1', rose = '#f43f5e', amber = '#f59e0b';
+        const grid    = { color: 'rgba(255,255,255,0.05)' };
+
+        // ---- revenue_by_period → line chart of period × revenue --------- //
+        if (tool === 'revenue_by_period' && Array.isArray(r)) {
+          const labels = r.map(d => d.period || d.date || d.order_date || '');
+          const data   = r.map(d => Number(d.revenue ?? d.amount ?? 0));
+          return {
+            type: 'line',
+            data: { labels, datasets: [{
+              label: 'revenue', data, borderColor: emerald,
+              backgroundColor: emeraldSoft, fill: true, tension: 0.35,
+              pointRadius: 2, pointHoverRadius: 4, borderWidth: 2,
+            }]},
+            options: this._baseOpts({ x: { grid }, y: { grid, beginAtZero: true } }),
+          };
+        }
+
+        // ---- top_products / top_customers → horizontal bar -------------- //
+        if ((tool === 'top_products' || tool === 'top_customers') && Array.isArray(r)) {
+          const keyName = tool === 'top_products' ? 'product' : 'customer';
+          const labels = r.map(d => d[keyName] || d.product_id || d.customer_id || d.sku || d.id || '');
+          const data   = r.map(d => Number(d.revenue ?? d.amount ?? d.total ?? 0));
+          return {
+            type: 'bar',
+            data: { labels, datasets: [{
+              label: 'revenue', data, backgroundColor: emerald, borderRadius: 4,
+            }]},
+            options: this._baseOpts({
+              x: { grid, beginAtZero: true },
+              y: { grid: { display: false } },
+            }, { indexAxis: 'y' }),
+          };
+        }
+
+        // ---- segment_customers → doughnut of {segment: count} ----------- //
+        if (tool === 'segment_customers' && r && typeof r === 'object' && !Array.isArray(r)) {
+          const labels = Object.keys(r);
+          if (labels.length < 2) return null;
+          const palette = [emerald, indigo, amber, rose, '#22d3ee', '#a78bfa', '#fb7185', '#94a3b8'];
+          return {
+            type: 'doughnut',
+            data: { labels, datasets: [{
+              data: labels.map(l => Number(r[l] ?? 0)),
+              backgroundColor: labels.map((_, i) => palette[i % palette.length]),
+              borderColor: '#0a0b10', borderWidth: 2,
+            }]},
+            options: this._baseOpts({}, {
+              cutout: '60%',
+              plugins: { legend: { display: true, position: 'right',
+                                   labels: { color: '#cbd5e1', boxWidth: 12 } } },
+            }),
+          };
+        }
+
+        // ---- product_quadrants → bar of {quadrant: count} --------------- //
+        if (tool === 'product_quadrants' && r && typeof r === 'object' && !Array.isArray(r)) {
+          const labels = Object.keys(r);
+          if (!labels.length) return null;
+          const palette = { Star: emerald, 'Cash Cow': amber,
+                            'Question Mark': indigo, Dog: rose };
+          return {
+            type: 'bar',
+            data: { labels, datasets: [{
+              label: 'products', data: labels.map(l => Number(r[l] ?? 0)),
+              backgroundColor: labels.map(l => palette[l] || '#94a3b8'),
+              borderRadius: 4,
+            }]},
+            options: this._baseOpts({ x: { grid: { display: false } },
+                                       y: { grid, beginAtZero: true } }),
+          };
+        }
+
+        // ---- churn_risk → tier counts from {tier: count} ---------------- //
+        if (tool === 'churn_risk' && r && typeof r === 'object' && !Array.isArray(r)) {
+          // Preferred order makes the colour story read left-to-right.
+          const order = ['Active', 'Cooling', 'At-Risk', 'Churned'];
+          const labels = order.filter(k => k in r).concat(
+                          Object.keys(r).filter(k => !order.includes(k)));
+          if (!labels.length) return null;
+          const colorFor = t => /churn/i.test(t) ? rose
+                              : /risk/i.test(t)  ? amber
+                              : /cool/i.test(t)  ? '#fbbf24'
+                              : emerald;
+          return {
+            type: 'bar',
+            data: { labels, datasets: [{
+              label: 'customers', data: labels.map(l => Number(r[l] ?? 0)),
+              backgroundColor: labels.map(colorFor), borderRadius: 4,
+            }]},
+            options: this._baseOpts({ x: { grid: { display: false } },
+                                       y: { grid, beginAtZero: true } }),
+          };
+        }
+
+        // ---- cohort_retention → line per cohort -------------------------- //
+        // Backend shape: { "<period_idx>": { "<cohort>": retention, ... }, ... }
+        if (tool === 'cohort_retention' && r && typeof r === 'object' && !Array.isArray(r)) {
+          // Pivot: cohort -> [{x: period, y: retention%}]
+          const periodKeys = Object.keys(r).sort((a, b) => Number(a) - Number(b));
+          if (!periodKeys.length) return null;
+          const cohortSet = new Set();
+          periodKeys.forEach(p => Object.keys(r[p] || {}).forEach(c => cohortSet.add(c)));
+          const cohorts = [...cohortSet].sort();
+          if (!cohorts.length) return null;
+          const palette = [emerald, indigo, amber, rose, '#22d3ee', '#a78bfa', '#fb7185', '#fbbf24'];
+          const datasets = cohorts.slice(0, 8).map((c, i) => ({
+            label: c,
+            data: periodKeys.map(p => ({
+              x: Number(p), y: Number(r[p][c] ?? 0) * 100,
+            })).filter(d => !isNaN(d.y)),
+            borderColor: palette[i % palette.length], backgroundColor: 'transparent',
+            tension: 0.3, pointRadius: 2, borderWidth: 2,
+          }));
+          return {
+            type: 'line',
+            data: { datasets },
+            options: this._baseOpts({
+              x: { type: 'linear', title: { display: true, text: 'months since signup' }, grid },
+              y: { title: { display: true, text: '% retained' }, grid,
+                   beginAtZero: true, max: 100 },
+            }, { plugins: { legend: { display: true, position: 'top',
+                                       labels: { color: '#cbd5e1', boxWidth: 10 } } } }),
+          };
+        }
+
+        return null;
+      },
+
+      // Chart.js base options — dark-themed, tight legend, nice tooltips.
+      _baseOpts(scales = {}, extra = {}) {
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false, labels: { color: '#cbd5e1', boxWidth: 12 } },
+            tooltip: {
+              backgroundColor: '#10131a', borderColor: 'rgba(255,255,255,0.08)',
+              borderWidth: 1, titleColor: '#f8fafc', bodyColor: '#cbd5e1',
+              padding: 10, cornerRadius: 6, displayColors: true,
+            },
+          },
+          scales,
+          ...extra,
+        };
       },
       async upload(file) {
         if (!file) return;
