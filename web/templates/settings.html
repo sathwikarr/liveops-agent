@@ -39,19 +39,21 @@
       </div>
     </div>
 
-    <div class="mt-5 grid gap-3 md:grid-cols-[1fr_auto_auto]">
+    <div class="mt-5 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
       <input x-model="slackValue" type="url" placeholder="https://hooks.slack.com/services/T.../B.../..."
-             class="focus-ring rounded-md border border-white/10 bg-ink-950/60 px-3 py-2.5 text-sm placeholder-slate-600">
-      <button type="button" @click="save('slack_webhook', slackValue)" :disabled="saving || !slackValue"
-              class="rounded-md bg-accent-500 px-4 py-2 text-sm font-medium text-ink-950 shadow-sm transition hover:bg-accent-400 disabled:opacity-50">
-        <span x-show="!saving">Save</span>
-        <span x-show="saving">Saving…</span>
-      </button>
-      <button type="button" @click="testKind('slack_webhook')" :disabled="!hasSlack || testing"
-              class="rounded-md border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-200 transition hover:border-accent-500/40 hover:text-accent-400 disabled:opacity-40">
-        <span x-show="!testing">Send test ping</span>
-        <span x-show="testing">Sending…</span>
-      </button>
+             class="focus-ring w-full rounded-md border border-white/10 bg-ink-950/60 px-3 py-2.5 text-sm placeholder-slate-600 sm:w-auto">
+      <div class="flex gap-3 sm:contents">
+        <button type="button" @click="save('slack_webhook', slackValue)" :disabled="saving || !slackValue"
+                class="flex-1 rounded-md bg-accent-500 px-4 py-2 text-sm font-medium text-ink-950 shadow-sm transition hover:bg-accent-400 disabled:opacity-50 sm:flex-none">
+          <span x-show="!saving">Save</span>
+          <span x-show="saving">Saving…</span>
+        </button>
+        <button type="button" @click="testKind('slack_webhook')" :disabled="!hasSlack || testing"
+                class="flex-1 rounded-md border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-200 transition hover:border-accent-500/40 hover:text-accent-400 disabled:opacity-40 sm:flex-none">
+          <span x-show="!testing">Send test ping</span>
+          <span x-show="testing">Sending…</span>
+        </button>
+      </div>
     </div>
 
     <div class="mt-3 flex items-center justify-between text-xs">

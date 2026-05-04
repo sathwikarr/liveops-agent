@@ -455,6 +455,31 @@ def test_observation_hints_fire_on_tiny_dataset(client, tmp_path, monkeypatch):
                 f"hint for {tool} did not mention {needle!r}: {obs['hint']!r}"
 
 
+def test_api_agent_ask_returns_obs_meta(client):
+    """Every ask response includes obs_meta with latency, plan size,
+    obs counts, hint count, and dataset row count — used by the workbench
+    badge strip below the answer."""
+    r = client.post("/api/agent/ask",
+                    json={"question": "top 5 products by revenue",
+                          "backend": "heuristic"})
+    assert r.status_code == 200
+    body = r.json()
+    assert "obs_meta" in body
+    meta = body["obs_meta"]
+    # All five keys present
+    for k in ("latency_ms", "n_steps", "n_obs", "n_errors", "n_hints", "rows"):
+        assert k in meta, f"obs_meta missing {k}"
+    # Latency is positive int (heuristic should be quick but never zero)
+    assert isinstance(meta["latency_ms"], int) and meta["latency_ms"] >= 0
+    # n_steps matches the plan
+    assert meta["n_steps"] == len(body["plan"]["steps"])
+    # Bundled dataset has thousands of rows; this confirms `rows` came from
+    # the active frame, not a hardcoded number.
+    assert meta["rows"] > 1000
+    # No errors expected for a clean question on the bundled dataset.
+    assert meta["n_errors"] == 0
+
+
 def test_observation_hints_silent_on_healthy_dataset(client):
     """The bundled retail dataset has rich signal — most observations should
     NOT carry a hint, because hints are reserved for degenerate output."""

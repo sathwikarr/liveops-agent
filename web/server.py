@@ -499,7 +499,14 @@ def _register_routes(app: FastAPI) -> None:
         df = _active_df(request)
         from analyst.agent import ask, _llm_available
         rm = _default_role_map(df)
+        # Time the entire plan-execute-synthesize round-trip.  Per-step timing
+        # would require editing the agent core; the wall-clock figure is what
+        # matters to a user comparing heuristic vs. LLM cost.
+        import time as _time
+        t0 = _time.perf_counter()
         result = ask(question, df, role_map=rm, backend=backend)
+        latency_ms = int((_time.perf_counter() - t0) * 1000)
+
         body = result.to_dict()
         body["observations"] = _attach_hints(body.get("observations", []), df, rm)
         actual_backend = body.get("plan", {}).get("backend", "heuristic")
@@ -507,6 +514,21 @@ def _register_routes(app: FastAPI) -> None:
             requested=backend, actual=actual_backend,
             llm_available=_llm_available(),
         )
+        # Per-question observability so users can see cost/quality per ask.
+        n_obs    = len(body.get("observations", []))
+        n_errors = sum(
+            1 for o in body.get("observations", [])
+            if isinstance(o.get("result"), dict) and "error" in o["result"]
+        )
+        n_hints  = sum(1 for o in body.get("observations", []) if o.get("hint"))
+        body["obs_meta"] = {
+            "latency_ms": latency_ms,
+            "n_steps":    len(body.get("plan", {}).get("steps", [])),
+            "n_obs":      n_obs,
+            "n_errors":   n_errors,
+            "n_hints":    n_hints,
+            "rows":       int(len(df)),
+        }
         # Persist the question for logged-in users.  We store the plan and
         # routing metadata, NOT the answer (could be huge).  Errors are best-
         # effort — never let DB hiccups break the answer pipeline.

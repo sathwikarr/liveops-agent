@@ -256,6 +256,48 @@
       <div class="glass mt-4 rounded-md border-rose2-500/40 p-3 text-sm text-rose2-400" x-text="error"></div>
     </template>
 
+    <!-- Loading skeleton: mimics the eventual answer + plan + observations
+         shape so the page doesn't reflow when the real data arrives.       -->
+    <template x-if="loading && !result">
+      <div class="mt-6 space-y-5" aria-busy="true" aria-live="polite">
+        <span class="sr-only">Running query…</span>
+        <div class="glass rounded-xl p-6">
+          <div class="skeleton h-3 w-16"></div>
+          <div class="mt-3 space-y-2">
+            <div class="skeleton h-3.5 w-11/12"></div>
+            <div class="skeleton h-3.5 w-9/12"></div>
+            <div class="skeleton h-3.5 w-10/12"></div>
+          </div>
+        </div>
+        <div class="glass rounded-xl p-6">
+          <div class="skeleton h-3 w-24"></div>
+          <ol class="mt-3 space-y-2">
+            <li class="rounded-md border border-white/5 bg-white/[0.03] p-3">
+              <div class="flex items-center justify-between gap-3">
+                <div class="skeleton h-4 w-32"></div>
+                <div class="skeleton h-3 w-16"></div>
+              </div>
+              <div class="mt-2 skeleton h-3 w-7/12"></div>
+            </li>
+            <li class="rounded-md border border-white/5 bg-white/[0.03] p-3">
+              <div class="flex items-center justify-between gap-3">
+                <div class="skeleton h-4 w-28"></div>
+                <div class="skeleton h-3 w-12"></div>
+              </div>
+              <div class="mt-2 skeleton h-3 w-6/12"></div>
+            </li>
+          </ol>
+        </div>
+        <div class="glass rounded-xl p-6">
+          <div class="skeleton h-3 w-28"></div>
+          <div class="mt-3 space-y-2">
+            <div class="skeleton h-9 w-full"></div>
+            <div class="skeleton h-9 w-full"></div>
+          </div>
+        </div>
+      </div>
+    </template>
+
     <template x-if="result">
       <div class="mt-6 space-y-5">
         <!-- Backend fallback banner: surfaces when the backend the user
@@ -286,7 +328,35 @@
 
         <!-- Answer -->
         <div class="glass rounded-xl p-6">
-          <div class="text-xs uppercase tracking-widest text-accent-400">Answer</div>
+          <div class="flex flex-wrap items-baseline justify-between gap-3">
+            <div class="text-xs uppercase tracking-widest text-accent-400">Answer</div>
+            <!-- Observability badges. Surfaces wall-clock latency, plan size,
+                 obs success rate, and dataset size — so the user can compare
+                 cost/quality per question without opening the JSON. -->
+            <template x-if="result.obs_meta">
+              <div class="flex flex-wrap items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest">
+                <span class="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-slate-400"
+                      :title="result.obs_meta.latency_ms + ' ms wall clock'"
+                      x-text="(result.obs_meta.latency_ms < 1000
+                                ? result.obs_meta.latency_ms + 'ms'
+                                : (result.obs_meta.latency_ms / 1000).toFixed(2) + 's')"></span>
+                <span class="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-slate-400"
+                      x-text="result.plan.backend"></span>
+                <span class="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-slate-400"
+                      x-text="result.obs_meta.n_steps + ' tool' + (result.obs_meta.n_steps === 1 ? '' : 's')"></span>
+                <template x-if="result.obs_meta.n_errors">
+                  <span class="rounded-md border border-rose2-500/30 bg-rose2-500/10 px-2 py-0.5 text-rose2-400"
+                        x-text="result.obs_meta.n_errors + ' err'"></span>
+                </template>
+                <template x-if="result.obs_meta.n_hints && !result.obs_meta.n_errors">
+                  <span class="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-amber-400"
+                        x-text="result.obs_meta.n_hints + ' hint'"></span>
+                </template>
+                <span class="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-slate-500"
+                      x-text="result.obs_meta.rows.toLocaleString() + ' rows'"></span>
+              </div>
+            </template>
+          </div>
           <pre class="mt-2 whitespace-pre-wrap font-mono text-sm leading-relaxed text-slate-200" x-text="result.answer"></pre>
         </div>
 
@@ -376,11 +446,23 @@
               <code class="font-mono text-xs text-accent-400">{{ t.name }}</code>
               <div class="mt-0.5 text-slate-300">{{ t.description }}</div>
               {% if t.params %}
-                <div class="mt-1 flex flex-wrap gap-1.5 text-xs text-slate-500">
+                <div class="mt-1.5 flex flex-wrap gap-1.5 text-xs">
                   {% for k, v in t.params.items() %}
-                    <span class="rounded bg-white/5 px-1.5 py-0.5 font-mono">{{ k }}</span>
+                    <!-- Tooltip-on-hover. We set the native `title` for screen
+                         readers + a custom CSS popover for a styled bubble. -->
+                    <span class="param-chip group relative cursor-help rounded bg-white/5 px-1.5 py-0.5 font-mono text-slate-400 hover:text-slate-200"
+                          title="{{ v }}"
+                          tabindex="0"
+                          aria-label="{{ k }}: {{ v }}">
+                      {{ k }}
+                      <span class="param-tip pointer-events-none absolute bottom-full left-0 z-20 mb-1.5 w-60 rounded-md border border-white/10 bg-ink-900/95 p-2.5 text-[11px] font-normal leading-snug text-slate-200 opacity-0 shadow-lg backdrop-blur transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                        {{ v }}
+                      </span>
+                    </span>
                   {% endfor %}
                 </div>
+              {% else %}
+                <div class="mt-1 text-[11px] italic text-slate-500">No parameters.</div>
               {% endif %}
             </li>
           {% endfor %}

@@ -65,7 +65,8 @@
   <!-- ============================================================ -->
   <!--  HEADER  ·  glass nav                                          -->
   <!-- ============================================================ -->
-  <header class="sticky top-0 z-30 border-b border-white/5 bg-ink-950/60 backdrop-blur-md">
+  <header class="sticky top-0 z-30 border-b border-white/5 bg-ink-950/60 backdrop-blur-md"
+          x-data="{ mobileOpen: false }">
     <nav class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
       <a href="/" class="flex items-center gap-2.5 font-display font-semibold tracking-tight">
         <span class="grid h-8 w-8 place-items-center rounded-lg border border-accent-500/30 bg-accent-500/10 text-accent-400">
@@ -77,12 +78,12 @@
         <span class="ml-2 hidden rounded-md border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-slate-400 sm:inline">v0.4</span>
       </a>
 
+      {% set links = [
+        ('/demo', 'Demo'),
+        ('/workbench', 'Workbench'),
+        ('/evals', 'Evals'),
+      ] %}
       <div class="hidden items-center gap-1 md:flex">
-        {% set links = [
-          ('/demo', 'Demo'),
-          ('/workbench', 'Workbench'),
-          ('/evals', 'Evals'),
-        ] %}
         {% for href, label in links %}
           <a href="{{ href }}"
              class="rounded-lg px-3 py-2 text-sm transition
@@ -117,19 +118,85 @@
         {% if username %}
           <span class="hidden text-sm text-slate-400 sm:inline">@{{ username }}</span>
           <form action="/logout" method="post" class="contents">
-            <button class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white">
+            <button class="hidden rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white sm:inline-block">
               Log out
             </button>
           </form>
         {% else %}
-          <a href="/login" class="rounded-md px-3 py-1.5 text-sm text-slate-300 hover:text-white">Log in</a>
+          <a href="/login" class="hidden rounded-md px-3 py-1.5 text-sm text-slate-300 hover:text-white sm:inline-block">Log in</a>
           <a href="/signup"
-             class="rounded-md border border-accent-500/30 bg-accent-500/10 px-3.5 py-1.5 text-sm font-medium text-accent-400 transition hover:border-accent-500/50 hover:bg-accent-500/15 hover:text-accent-300">
+             class="hidden rounded-md border border-accent-500/30 bg-accent-500/10 px-3.5 py-1.5 text-sm font-medium text-accent-400 transition hover:border-accent-500/50 hover:bg-accent-500/15 hover:text-accent-300 sm:inline-block">
+            Sign up
+          </a>
+        {% endif %}
+
+        <!-- Hamburger toggle — only visible under md. Aria-controls binds it to
+             the disclosure panel below for screen-reader users. -->
+        <button type="button"
+                @click="mobileOpen = !mobileOpen"
+                :aria-expanded="mobileOpen"
+                aria-controls="mobile-nav"
+                class="grid h-9 w-9 place-items-center rounded-md border border-white/10 bg-white/[0.03] text-slate-300 transition hover:border-white/20 hover:text-white md:hidden">
+          <svg x-show="!mobileOpen" viewBox="0 0 24 24" class="h-5 w-5"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18M3 12h18M3 18h18"/>
+          </svg>
+          <svg x-show="mobileOpen" x-cloak viewBox="0 0 24 24" class="h-5 w-5"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 6l12 12M18 6l-12 12"/>
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Mobile drawer — stacks every link plus auth actions. Hidden on md+. -->
+    <div id="mobile-nav" x-show="mobileOpen" x-cloak
+         class="border-t border-white/5 bg-ink-950/95 px-4 py-3 md:hidden"
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0 -translate-y-1"
+         x-transition:enter-end="opacity-100 translate-y-0">
+      <div class="flex flex-col gap-1">
+        {% for href, label in links %}
+          <a href="{{ href }}"
+             class="rounded-md px-3 py-2 text-sm
+                    {% if current_path == href %}bg-white/10 text-white{% else %}text-slate-300 hover:bg-white/5 hover:text-white{% endif %}">
+            {{ label }}
+          </a>
+        {% endfor %}
+        {% if username %}
+          <a href="/dashboard"
+             class="rounded-md px-3 py-2 text-sm
+                    {% if current_path == '/dashboard' %}bg-white/10 text-white{% else %}text-slate-300 hover:bg-white/5 hover:text-white{% endif %}">
+            Dashboard
+          </a>
+          <a href="/run-agent"
+             class="rounded-md px-3 py-2 text-sm
+                    {% if current_path == '/run-agent' %}bg-white/10 text-white{% else %}text-slate-300 hover:bg-white/5 hover:text-white{% endif %}">
+            Run agent
+          </a>
+          <a href="/settings"
+             class="rounded-md px-3 py-2 text-sm
+                    {% if current_path == '/settings' %}bg-white/10 text-white{% else %}text-slate-300 hover:bg-white/5 hover:text-white{% endif %}">
+            Settings
+          </a>
+          <form action="/logout" method="post">
+            <button type="submit"
+                    class="mt-1 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/10 hover:text-white">
+              Log out @{{ username }}
+            </button>
+          </form>
+        {% else %}
+          <a href="/login"
+             class="rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-white/5 hover:text-white">
+            Log in
+          </a>
+          <a href="/signup"
+             class="rounded-md border border-accent-500/30 bg-accent-500/10 px-3 py-2 text-sm font-medium text-accent-400 transition hover:bg-accent-500/15">
             Sign up
           </a>
         {% endif %}
       </div>
-    </nav>
+    </div>
   </header>
 
   {% if flash %}
