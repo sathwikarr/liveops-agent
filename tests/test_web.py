@@ -735,6 +735,80 @@ def test_connectors_save_list_delete_with_encryption(tmp_path, monkeypatch):
         assert r.status_code == 404
 
 
+def test_smtp_connector_save_validate_encrypt(tmp_path, monkeypatch):
+    """SMTP config: validation rejects bad shapes/ports/emails; happy path
+    encrypts the password at rest."""
+    db_path = tmp_path / "liveops_test.db"
+    monkeypatch.setenv("LIVEOPS_DB", str(db_path))
+    monkeypatch.setenv("SESSION_SECRET", "test-secret-deterministic")
+    import importlib, json as _j, agent.db as _db, agent.secret as _sec
+    importlib.reload(_db); importlib.reload(_sec); _db.init_db()
+    from web.server import create_app
+    from fastapi.testclient import TestClient
+
+    app = create_app()
+    with TestClient(app) as c:
+        c.post("/signup", data={"username": "alice", "password": "secret123",
+                                "confirm": "secret123", "next": "/"})
+
+        # Validation: not an object
+        r = c.post("/api/connectors/save",
+                   json={"kind": "smtp_config", "value": "bad"})
+        assert r.status_code == 400 and "must be an object" in r.json()["detail"]
+
+        # Validation: missing fields
+        r = c.post("/api/connectors/save",
+                   json={"kind": "smtp_config", "value": {"host": "x"}})
+        assert r.status_code == 400 and "missing field" in r.json()["detail"]
+
+        # Validation: bad port
+        r = c.post("/api/connectors/save", json={"kind": "smtp_config",
+            "value": {"host":"x","port":"abc","user":"u","password":"p","from_addr":"a@b.com"}})
+        assert r.status_code == 400 and "port must be" in r.json()["detail"]
+
+        # Validation: bad email
+        r = c.post("/api/connectors/save", json={"kind": "smtp_config",
+            "value": {"host":"x","port":587,"user":"u","password":"p","from_addr":"nope"}})
+        assert r.status_code == 400 and "email" in r.json()["detail"]
+
+        # Happy path
+        cfg = {"host":"smtp.example.com","port":587,"user":"alice@ex.com",
+               "password":"supersecret","from_addr":"alerts@ex.com","use_tls":True}
+        r = c.post("/api/connectors/save", json={"kind":"smtp_config","value":cfg})
+        assert r.status_code == 200
+
+        # Listed (no plaintext leaked)
+        listed = c.get("/api/connectors").json()["connectors"]
+        assert any(d["kind"] == "smtp_config" for d in listed)
+        assert all("password" not in str(d) for d in listed)
+
+        # Encrypted at rest
+        raw = _db.get_user_connector("alice", "smtp_config")
+        assert b"supersecret" not in raw
+        decoded = _j.loads(_sec.decrypt(raw))
+        assert decoded["password"] == "supersecret"
+        assert decoded["host"] == "smtp.example.com"
+        assert decoded["port"] == 587
+        assert decoded["use_tls"] is True
+
+
+def test_smtp_test_endpoint_requires_config(tmp_path, monkeypatch):
+    """Hitting /test with no SMTP saved returns 404."""
+    db_path = tmp_path / "liveops_test.db"
+    monkeypatch.setenv("LIVEOPS_DB", str(db_path))
+    monkeypatch.setenv("SESSION_SECRET", "test-secret-deterministic")
+    import importlib, agent.db as _db; importlib.reload(_db); _db.init_db()
+    from web.server import create_app
+    from fastapi.testclient import TestClient
+
+    app = create_app()
+    with TestClient(app) as c:
+        c.post("/signup", data={"username": "alice", "password": "secret123",
+                                "confirm": "secret123", "next": "/"})
+        r = c.post("/api/connectors/test", json={"kind": "smtp_config"})
+        assert r.status_code == 404
+
+
 def test_connectors_anonymous_redirected(client):
     """All connector routes are auth-gated — anon hits 303 to /login."""
     for path in ("/settings",):

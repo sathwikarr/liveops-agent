@@ -69,21 +69,80 @@
   </section>
 
   <!-- ====================================================== -->
-  <!-- SMTP / EMAIL — placeholder for the next iteration       -->
+  <!-- SMTP / EMAIL                                            -->
   <!-- ====================================================== -->
-  <section class="glass rounded-xl p-6 opacity-70">
+  <section class="glass rounded-xl p-6">
     <div class="flex items-center gap-2">
-      <span class="grid h-9 w-9 place-items-center rounded-md border border-white/10 bg-white/[0.04] text-slate-400">
+      <span class="grid h-9 w-9 place-items-center rounded-md border border-white/10 bg-white/[0.04] text-accent-400">
         <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 4h16v16H4z"/><path d="M4 4l8 8 8-8"/>
         </svg>
       </span>
       <h2 class="font-display text-lg font-semibold">Email (SMTP)</h2>
-      <span class="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-slate-500">coming soon</span>
+      <template x-if="hasSmtp">
+        <span class="rounded-md border border-accent-500/30 bg-accent-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-accent-400">configured</span>
+      </template>
     </div>
     <p class="mt-2 text-sm leading-relaxed text-slate-400">
-      SMTP host / port / user / pass / from-address. Same encryption-at-rest model as Slack.
+      Same encryption-at-rest model as Slack. Connection uses STARTTLS by default — works with Gmail (port 587), SES, Mailgun, Postmark, etc.
     </p>
+
+    <div class="mt-5 grid gap-3 sm:grid-cols-2">
+      <label class="text-xs">
+        <span class="block font-medium text-slate-300">SMTP host</span>
+        <input x-model="smtp.host" type="text" placeholder="smtp.gmail.com"
+               class="focus-ring mt-1 w-full rounded-md border border-white/10 bg-ink-950/60 px-3 py-2 text-sm placeholder-slate-600">
+      </label>
+      <label class="text-xs">
+        <span class="block font-medium text-slate-300">Port</span>
+        <input x-model.number="smtp.port" type="number" min="1" max="65535" placeholder="587"
+               class="focus-ring mt-1 w-full rounded-md border border-white/10 bg-ink-950/60 px-3 py-2 text-sm placeholder-slate-600">
+      </label>
+      <label class="text-xs">
+        <span class="block font-medium text-slate-300">Username</span>
+        <input x-model="smtp.user" type="text" placeholder="ops@example.com" autocomplete="off"
+               class="focus-ring mt-1 w-full rounded-md border border-white/10 bg-ink-950/60 px-3 py-2 text-sm placeholder-slate-600">
+      </label>
+      <label class="text-xs">
+        <span class="block font-medium text-slate-300">Password / app token</span>
+        <input x-model="smtp.password" type="password" placeholder="•••••••••" autocomplete="new-password"
+               class="focus-ring mt-1 w-full rounded-md border border-white/10 bg-ink-950/60 px-3 py-2 text-sm placeholder-slate-600">
+      </label>
+      <label class="text-xs sm:col-span-2">
+        <span class="block font-medium text-slate-300">From address</span>
+        <input x-model="smtp.from_addr" type="email" placeholder="alerts@example.com"
+               class="focus-ring mt-1 w-full rounded-md border border-white/10 bg-ink-950/60 px-3 py-2 text-sm placeholder-slate-600">
+      </label>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <label class="flex items-center gap-2 text-xs text-slate-400">
+        <input x-model="smtp.use_tls" type="checkbox" class="rounded border-white/10 bg-ink-950/60 text-accent-500 focus:ring-accent-500/40">
+        Use STARTTLS
+      </label>
+      <label class="ml-auto text-xs">
+        <span class="block font-medium text-slate-300">Send test to</span>
+        <input x-model="smtpTestTo" type="email" placeholder="defaults to From address"
+               class="focus-ring mt-1 w-64 rounded-md border border-white/10 bg-ink-950/60 px-3 py-1.5 text-xs placeholder-slate-600">
+      </label>
+    </div>
+
+    <div class="mt-4 flex flex-wrap gap-3">
+      <button type="button" @click="saveSmtp()" :disabled="saving || !smtpComplete"
+              class="rounded-md bg-accent-500 px-4 py-2 text-sm font-medium text-ink-950 shadow-sm transition hover:bg-accent-400 disabled:opacity-50">
+        <span x-show="!saving">Save</span>
+        <span x-show="saving">Saving…</span>
+      </button>
+      <button type="button" @click="testSmtp()" :disabled="!hasSmtp || testing"
+              class="rounded-md border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-200 transition hover:border-accent-500/40 hover:text-accent-400 disabled:opacity-40">
+        <span x-show="!testing">Send test email</span>
+        <span x-show="testing">Sending…</span>
+      </button>
+      <template x-if="hasSmtp">
+        <button type="button" @click="remove('smtp_config')"
+                class="ml-auto text-xs text-slate-500 hover:text-rose2-400">Remove SMTP config</button>
+      </template>
+    </div>
   </section>
 </div>
 
@@ -92,11 +151,19 @@
     return {
       configured: [],         // [{kind, updated_at}]
       slackValue: '',
+      smtp: { host: '', port: 587, user: '', password: '', from_addr: '', use_tls: true },
+      smtpTestTo: '',
       saving: false,
       testing: false,
       message: '',
       messageKind: 'success',
       get hasSlack() { return this.configured.some(c => c.kind === 'slack_webhook'); },
+      get hasSmtp()  { return this.configured.some(c => c.kind === 'smtp_config');  },
+      get smtpComplete() {
+        const s = this.smtp;
+        return s.host && s.port && s.user && s.password &&
+               s.from_addr && s.from_addr.includes('@');
+      },
       flash(text, kind) { this.message = text; this.messageKind = kind || 'success';
                            setTimeout(() => { this.message = ''; }, 6000); },
       async load() {
@@ -143,6 +210,38 @@
           const body = await r.json();
           if (!r.ok) throw new Error(body.detail || 'test failed');
           this.flash('✓ Test ping delivered.', 'success');
+        } catch (e) { this.flash(e.message, 'error'); }
+        finally { this.testing = false; }
+      },
+      async saveSmtp() {
+        if (!this.smtpComplete) return;
+        this.saving = true;
+        try {
+          const r = await fetch('/api/connectors/save', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kind: 'smtp_config', value: this.smtp }),
+          });
+          const body = await r.json();
+          if (!r.ok) throw new Error(body.detail || 'save failed');
+          // Don't keep the password in memory after save.
+          this.smtp.password = '';
+          await this.load();
+          this.flash('SMTP saved.', 'success');
+        } catch (e) { this.flash(e.message, 'error'); }
+        finally { this.saving = false; }
+      },
+      async testSmtp() {
+        this.testing = true;
+        try {
+          const body_ = { kind: 'smtp_config' };
+          if (this.smtpTestTo) body_.to = this.smtpTestTo;
+          const r = await fetch('/api/connectors/test', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body_),
+          });
+          const body = await r.json();
+          if (!r.ok) throw new Error(body.detail || 'test failed');
+          this.flash('✓ Test email sent to ' + body.to, 'success');
         } catch (e) { this.flash(e.message, 'error'); }
         finally { this.testing = false; }
       },

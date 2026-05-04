@@ -425,19 +425,44 @@ def _register_routes(app: FastAPI) -> None:
     async def api_connectors_save(request: Request,
                                    payload: Dict[str, Any] = Body(...)):
         user = _require_user(request)
-        kind  = (payload.get("kind") or "").strip()
-        value = (payload.get("value") or "").strip()
-        if kind not in ("slack_webhook",):
+        kind = (payload.get("kind") or "").strip()
+        if kind == "slack_webhook":
+            value = (payload.get("value") or "").strip()
+            if not value:
+                raise HTTPException(400, "value is required")
+            if not value.startswith("https://hooks.slack.com/"):
+                raise HTTPException(400,
+                    "slack_webhook must start with https://hooks.slack.com/")
+            stored = value
+        elif kind == "smtp_config":
+            cfg = payload.get("value") or {}
+            if not isinstance(cfg, dict):
+                raise HTTPException(400, "smtp_config value must be an object")
+            required = ("host", "port", "user", "password", "from_addr")
+            missing = [k for k in required if not str(cfg.get(k, "")).strip()]
+            if missing:
+                raise HTTPException(400, f"missing field(s): {missing}")
+            try:
+                port = int(cfg["port"])
+                assert 1 <= port <= 65535
+            except Exception:
+                raise HTTPException(400, "port must be an integer 1-65535")
+            if "@" not in cfg["from_addr"]:
+                raise HTTPException(400, "from_addr must be an email address")
+            stored = json.dumps({
+                "host":      str(cfg["host"]).strip(),
+                "port":      port,
+                "user":      str(cfg["user"]).strip(),
+                "password":  str(cfg["password"]),    # don't strip — leading spaces matter for some keys
+                "from_addr": str(cfg["from_addr"]).strip(),
+                "use_tls":   bool(cfg.get("use_tls", True)),
+            })
+        else:
             raise HTTPException(400, f"unsupported kind: {kind!r}")
-        if not value:
-            raise HTTPException(400, "value is required")
-        if kind == "slack_webhook" and not value.startswith("https://hooks.slack.com/"):
-            raise HTTPException(400,
-                "slack_webhook must start with https://hooks.slack.com/")
         from agent import db
         from agent.secret import encrypt
         db.upsert_user_connector(username=user, kind=kind,
-                                  value_encrypted=encrypt(value))
+                                  value_encrypted=encrypt(stored))
         return {"ok": True, "kind": kind}
 
     @app.post("/api/connectors/delete", response_class=JSONResponse)
@@ -485,6 +510,47 @@ def _register_routes(app: FastAPI) -> None:
                 raise
             except Exception as e:
                 raise HTTPException(502, f"slack ping failed: {type(e).__name__}: {e}")
+
+        if kind == "smtp_config":
+            try:
+                cfg = json.loads(value)
+            except Exception:
+                raise HTTPException(500, "stored SMTP config is corrupt")
+            to_addr = (payload.get("to") or cfg.get("from_addr"))
+            if not to_addr or "@" not in to_addr:
+                raise HTTPException(400,
+                    "specify a `to` address (or set from_addr to a real inbox)")
+            import smtplib
+            from email.message import EmailMessage
+            msg = EmailMessage()
+            msg["Subject"] = f"LiveOps Agent · test from @{user}"
+            msg["From"]    = cfg["from_addr"]
+            msg["To"]      = to_addr
+            msg.set_content(
+                f"This is a test message from LiveOps Agent.\n\n"
+                f"User:     @{user}\n"
+                f"Server:   {cfg['host']}:{cfg['port']}\n"
+                f"From:     {cfg['from_addr']}\n"
+                f"Mechanism: STARTTLS\n\n"
+                f"If you received this, your SMTP connector is configured correctly."
+            )
+            try:
+                with smtplib.SMTP(cfg["host"], int(cfg["port"]), timeout=15) as s:
+                    s.ehlo()
+                    if cfg.get("use_tls", True):
+                        s.starttls()
+                        s.ehlo()
+                    s.login(cfg["user"], cfg["password"])
+                    s.send_message(msg)
+                return {"ok": True, "to": to_addr}
+            except smtplib.SMTPAuthenticationError as e:
+                raise HTTPException(502,
+                    f"SMTP auth failed (check user/password): {e}")
+            except smtplib.SMTPException as e:
+                raise HTTPException(502, f"SMTP error: {type(e).__name__}: {e}")
+            except Exception as e:
+                raise HTTPException(502, f"SMTP send failed: {type(e).__name__}: {e}")
+
         raise HTTPException(400, f"test not implemented for kind: {kind!r}")
 
     # ---- JSON APIs (called from page JS) -------------------------------- #
