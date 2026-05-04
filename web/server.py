@@ -1151,6 +1151,42 @@ def _dataset_profile(df: pd.DataFrame, role_map: Dict[str, str]) -> Dict[str, An
         except Exception:
             pass
 
+    # ---- Missing role banner: which tools won't work at all? ------------ #
+    # Map every tool to the roles it strictly needs.  If a tool's roles
+    # aren't in the inferred role_map, surface it once at profile level so
+    # the user sees the gap before asking any question.
+    _TOOL_ROLE_REQS = {
+        "top_products":      {"product", "amount"},
+        "top_customers":     {"customer", "amount"},
+        "segment_customers": {"customer", "date", "amount"},
+        "cohort_retention":  {"customer", "date"},
+        "churn_risk":        {"customer", "date"},
+        "co_purchases":      {"customer", "product"},   # uses customer as basket key
+        "price_elasticity":  {"product", "price", "quantity"},
+        "product_quadrants": {"product", "amount", "date"},
+    }
+    have = set(role_map.keys())
+    blocked = []
+    for tool, needs in _TOOL_ROLE_REQS.items():
+        if not needs.issubset(have):
+            blocked.append((tool, sorted(needs - have)))
+    if blocked:
+        # Group by missing role so the message is concise.
+        by_role: Dict[str, List[str]] = {}
+        for tool, miss in blocked:
+            for r in miss:
+                by_role.setdefault(r, []).append(tool)
+        miss_strs = []
+        for r, ts in sorted(by_role.items()):
+            miss_strs.append(f"a `{r}` column (blocks {', '.join(ts)})")
+        tips.insert(0, {
+            "tool": "schema",
+            "severity": "warn",
+            "message": ("Your dataset is missing "
+                         + "; ".join(miss_strs) + ". "
+                         + f"Only {len(have)}/7 analytic roles inferred — most tools won't run."),
+        })
+
     return profile
 
 
@@ -1164,9 +1200,46 @@ def _observation_hint(tool: str, result: Any,
     broken. With a hint, they see "Your dataset spans 4 days — cohort
     retention curves need at least one full month per cohort."
     """
-    # Pass through tool errors untouched; they already contain the message.
+    # ---- Translate missing-column errors into actionable advice. -------- #
+    # Tools raise messages like "Need customer + date for cohort analysis"
+    # or "Need product + amount roles".  Translate these into prose that
+    # tells the user WHICH column to add to their CSV.
     if isinstance(result, dict) and "error" in result:
-        return None
+        msg = str(result["error"])
+        # Detect role-requirement patterns from analyst tool guards:
+        #   "Need customer + date + amount", "RFM needs customer + date + amount",
+        #   "Need product + amount roles", "Not enough baskets ...".
+        import re as _re
+        m = (_re.match(r"\s*Need\s+([a-z+ _,/]+?)\s+(?:roles|for|to|$)", msg, _re.I)
+             or _re.search(r"\bneeds?\s+([a-z]+(?:\s*[+,/&]\s*[a-z]+)+)", msg, _re.I))
+        if m:
+            roles_blob = m.group(1)
+            needed = [t.strip() for t in _re.split(r"[+,/\s]+", roles_blob) if t.strip()]
+            present = sorted(role_map.keys())
+            missing = [r for r in needed if r not in role_map]
+            cols_now = list(df.columns)
+            # Suggest a column name for each missing role from our alias map.
+            suggestions = {
+                "customer": "customer_id",
+                "product":  "product_id",
+                "date":     "order_date",
+                "amount":   "amount or revenue",
+                "quantity": "quantity",
+                "price":    "price",
+            }
+            sug_bits = [f"`{suggestions.get(r, r)}`" for r in missing]
+            if missing:
+                return (
+                    f"This tool needs a column for "
+                    f"{', '.join(missing)}. Your dataset's columns "
+                    f"({', '.join(cols_now)}) only resolve to "
+                    f"{', '.join(present) or 'none of the analytic roles'}. "
+                    f"Add a column named {', '.join(sug_bits)} (or any common "
+                    f"synonym) to use this tool."
+                )
+        # Generic error fallback — at least say something actionable.
+        return (f"Tool returned an error: {msg[:120]}. "
+                f"Check that your dataset's columns parse cleanly.")
 
     n_orders    = len(df)
     n_customers = int(df[role_map["customer"]].nunique()) if "customer" in role_map else 0

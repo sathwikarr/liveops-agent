@@ -480,7 +480,47 @@ def test_api_agent_ask_returns_obs_meta(client):
     assert meta["n_errors"] == 0
 
 
-def test_observation_hints_silent_on_healthy_dataset(client):
+def test_minimal_two_column_csv_produces_actionable_hints(client, tmp_path, monkeypatch):
+    """User uploads timestamp+revenue only.  7 of 10 tools should error,
+    but EVERY error must be wrapped in an actionable hint that names the
+    missing role and suggests a column name."""
+    monkeypatch.setenv("LIVEOPS_UPLOAD_DIR", str(tmp_path / "uploads"))
+    from web.server import create_app
+    from fastapi.testclient import TestClient
+    app = create_app()
+    with TestClient(app) as c:
+        body = (b"timestamp,revenue\n"
+                b"2025-12-02T15:22:10,100.0\n"
+                b"2025-12-03T15:22:10,105.0\n"
+                b"2025-12-04T15:22:10,110.0\n"
+                b"2025-12-05T15:22:10,115.0\n"
+                b"2025-12-06T15:22:10,120.0\n")
+        upload = c.post("/api/workbench/upload",
+                        files={"file": ("test.csv", body, "text/csv")}).json()
+        # Profile must surface a missing-roles banner before any question.
+        tip_tools = [t["tool"] for t in upload["profile"]["tips"]]
+        assert "schema" in tip_tools
+        schema_tip = next(t for t in upload["profile"]["tips"] if t["tool"] == "schema")
+        assert "customer" in schema_tip["message"]
+        assert "product"  in schema_tip["message"]
+
+        # Each errored tool must surface a friendly per-observation hint
+        # naming the missing column and current columns.
+        for q, missing_role in (("top 5 products",  "product"),
+                                 ("show me cohort retention", "customer"),
+                                 ("rfm segments",            "customer"),
+                                 ("who is about to churn?",  "customer")):
+            r = c.post("/api/agent/ask",
+                       json={"question": q, "backend": "heuristic"}).json()
+            obs = r["observations"][0]
+            assert obs.get("hint"), f"no hint on {obs['tool']} for {q!r}"
+            assert missing_role in obs["hint"], \
+                f"hint for {q!r} should mention missing role {missing_role!r}: {obs['hint']!r}"
+            assert "timestamp, revenue" in obs["hint"], \
+                "hint should show what columns the user actually has"
+
+
+
     """The bundled retail dataset has rich signal — most observations should
     NOT carry a hint, because hints are reserved for degenerate output."""
     questions_with_no_expected_hint = [
