@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Settings · LiveOps Agent{% endblock %}
+
+{% block content %}
+<header class="mb-10 hero-enter">
+  <span class="eyebrow">settings · @{{ user }}</span>
+  <h1 class="mt-3 font-display text-4xl font-semibold tracking-tight md:text-5xl">
+    Connect your <span class="accent-text">channels</span>
+  </h1>
+  <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-slate-400">
+    Credentials are encrypted at rest and only ever decrypted server-side when sending a notification.
+    Nothing here is shared between users.
+  </p>
+</header>
+
+<div x-data="connectors()" x-init="load()" class="space-y-6">
+
+  <!-- ====================================================== -->
+  <!-- SLACK WEBHOOK                                          -->
+  <!-- ====================================================== -->
+  <section class="glass rounded-xl p-6">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="grid h-9 w-9 place-items-center rounded-md border border-white/10 bg-white/[0.04] text-accent-400">
+            <!-- Stylised "S" — no real Slack glyph to keep it brand-neutral. -->
+            <span class="font-display text-sm font-bold">S</span>
+          </span>
+          <h2 class="font-display text-lg font-semibold">Slack webhook</h2>
+          <template x-if="hasSlack">
+            <span class="rounded-md border border-accent-500/30 bg-accent-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-accent-400">configured</span>
+          </template>
+        </div>
+        <p class="mt-2 text-sm leading-relaxed text-slate-400">
+          Anomaly + recommendation notifications will post to this channel.
+          Get the URL from <em>Slack → Apps → Incoming Webhooks → Add to Channel</em>.
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-5 grid gap-3 md:grid-cols-[1fr_auto_auto]">
+      <input x-model="slackValue" type="url" placeholder="https://hooks.slack.com/services/T.../B.../..."
+             class="focus-ring rounded-md border border-white/10 bg-ink-950/60 px-3 py-2.5 text-sm placeholder-slate-600">
+      <button type="button" @click="save('slack_webhook', slackValue)" :disabled="saving || !slackValue"
+              class="rounded-md bg-accent-500 px-4 py-2 text-sm font-medium text-ink-950 shadow-sm transition hover:bg-accent-400 disabled:opacity-50">
+        <span x-show="!saving">Save</span>
+        <span x-show="saving">Saving…</span>
+      </button>
+      <button type="button" @click="testKind('slack_webhook')" :disabled="!hasSlack || testing"
+              class="rounded-md border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-200 transition hover:border-accent-500/40 hover:text-accent-400 disabled:opacity-40">
+        <span x-show="!testing">Send test ping</span>
+        <span x-show="testing">Sending…</span>
+      </button>
+    </div>
+
+    <div class="mt-3 flex items-center justify-between text-xs">
+      <template x-if="hasSlack">
+        <button type="button" @click="remove('slack_webhook')"
+                class="text-slate-500 hover:text-rose2-400">Remove webhook</button>
+      </template>
+      <template x-if="message">
+        <span :class="messageKind === 'error' ? 'text-rose2-400' : 'text-accent-400'"
+              x-text="message"></span>
+      </template>
+    </div>
+  </section>
+
+  <!-- ====================================================== -->
+  <!-- SMTP / EMAIL — placeholder for the next iteration       -->
+  <!-- ====================================================== -->
+  <section class="glass rounded-xl p-6 opacity-70">
+    <div class="flex items-center gap-2">
+      <span class="grid h-9 w-9 place-items-center rounded-md border border-white/10 bg-white/[0.04] text-slate-400">
+        <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h16v16H4z"/><path d="M4 4l8 8 8-8"/>
+        </svg>
+      </span>
+      <h2 class="font-display text-lg font-semibold">Email (SMTP)</h2>
+      <span class="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-slate-500">coming soon</span>
+    </div>
+    <p class="mt-2 text-sm leading-relaxed text-slate-400">
+      SMTP host / port / user / pass / from-address. Same encryption-at-rest model as Slack.
+    </p>
+  </section>
+</div>
+
+<script>
+  function connectors() {
+    return {
+      configured: [],         // [{kind, updated_at}]
+      slackValue: '',
+      saving: false,
+      testing: false,
+      message: '',
+      messageKind: 'success',
+      get hasSlack() { return this.configured.some(c => c.kind === 'slack_webhook'); },
+      flash(text, kind) { this.message = text; this.messageKind = kind || 'success';
+                           setTimeout(() => { this.message = ''; }, 6000); },
+      async load() {
+        const r = await fetch('/api/connectors');
+        const body = await r.json();
+        this.configured = body.connectors || [];
+      },
+      async save(kind, value) {
+        if (!value) return;
+        this.saving = true;
+        try {
+          const r = await fetch('/api/connectors/save', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kind, value }),
+          });
+          const body = await r.json();
+          if (!r.ok) throw new Error(body.detail || 'save failed');
+          await this.load();
+          if (kind === 'slack_webhook') this.slackValue = '';
+          this.flash('Saved.', 'success');
+        } catch (e) { this.flash(e.message, 'error'); }
+        finally { this.saving = false; }
+      },
+      async remove(kind) {
+        if (!confirm('Remove this connector?')) return;
+        try {
+          const r = await fetch('/api/connectors/delete', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kind }),
+          });
+          const body = await r.json();
+          if (!r.ok) throw new Error(body.detail || 'remove failed');
+          await this.load();
+          this.flash('Removed.', 'success');
+        } catch (e) { this.flash(e.message, 'error'); }
+      },
+      async testKind(kind) {
+        this.testing = true;
+        try {
+          const r = await fetch('/api/connectors/test', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kind }),
+          });
+          const body = await r.json();
+          if (!r.ok) throw new Error(body.detail || 'test failed');
+          this.flash('✓ Test ping delivered.', 'success');
+        } catch (e) { this.flash(e.message, 'error'); }
+        finally { this.testing = false; }
+      },
+    };
+  }
+</script>
+{% endblock %}

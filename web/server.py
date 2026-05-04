@@ -76,30 +76,71 @@ def _sample_df() -> pd.DataFrame:
     return _SAMPLE_DF
 
 
-def _active_df(request: Request) -> pd.DataFrame:
-    """Return the session's uploaded frame if it exists, else the bundled one.
+def _user_upload_dir(username: str) -> Path:
+    """Per-user directory for persisted uploads. Slugged for filesystem safety."""
+    safe = re.sub(r"[^A-Za-z0-9_-]+", "_", username)[:48] or "anon"
+    return UPLOAD_DIR / "users" / safe
 
-    The session cookie holds a relative filename (not a full path) so a leaked
-    cookie can't escape UPLOAD_DIR. We re-validate the path on every read.
+
+def _active_dataset_path(request: Request) -> Optional[Path]:
+    """Resolve the session's pinned dataset to a real file on disk.
+
+    Two backends:
+      1. Logged-in user with a pinned dataset id → look up via DB
+      2. Anonymous (or pre-login) session with a file pointer → resolve under UPLOAD_DIR
+
+    Returns None if no upload is pinned, or if the pointer is stale.
+    Always re-validates the resolved path against the allowed roots so a
+    leaked cookie can't escape into another user's uploads.
     """
+    user = request.session.get("username")
+    # ---- 1. Persistent (logged-in) ---- #
+    ds_id = request.session.get("workbench_dataset_id") if user else None
+    if user and ds_id:
+        try:
+            from agent import db
+            row = db.get_user_dataset(user, int(ds_id))
+        except Exception:
+            row = None
+        if row:
+            p = (_user_upload_dir(user) / row["file"]).resolve()
+            if p.parent == _user_upload_dir(user).resolve() and p.exists():
+                return p
+        # Pointer is stale (file deleted, user changed, etc.) — drop it.
+        request.session.pop("workbench_dataset_id", None)
+        request.session.pop("workbench_dataset_meta", None)
+
+    # ---- 2. Session-scoped (anonymous) ---- #
     name = request.session.get("workbench_dataset")
     if name:
-        path = (UPLOAD_DIR / name).resolve()
-        if path.parent == UPLOAD_DIR.resolve() and path.exists():
-            try:
-                return pd.read_csv(path)
-            except Exception:
-                # Corrupt file — drop the session pointer and fall back.
-                request.session.pop("workbench_dataset", None)
-                request.session.pop("workbench_dataset_meta", None)
+        p = (UPLOAD_DIR / name).resolve()
+        if p.parent == UPLOAD_DIR.resolve() and p.exists():
+            return p
+        request.session.pop("workbench_dataset", None)
+        request.session.pop("workbench_dataset_meta", None)
+    return None
+
+
+def _active_df(request: Request) -> pd.DataFrame:
+    """Return the active uploaded frame, falling back to the bundled CSV."""
+    p = _active_dataset_path(request)
+    if p:
+        try:
+            return pd.read_csv(p)
+        except Exception:
+            # Corrupt file — clear pointers and fall back.
+            request.session.pop("workbench_dataset", None)
+            request.session.pop("workbench_dataset_id", None)
+            request.session.pop("workbench_dataset_meta", None)
     return _sample_df()
 
 
 def _active_meta(request: Request) -> Dict[str, Any]:
     """Lightweight description of the active dataset for the UI chip."""
-    meta = request.session.get("workbench_dataset_meta")
-    if meta and (UPLOAD_DIR / meta.get("file", "")).exists():
-        return {**meta, "source": "upload"}
+    if _active_dataset_path(request):
+        meta = request.session.get("workbench_dataset_meta") or {}
+        return {**meta, "source": "upload",
+                "persisted": bool(request.session.get("workbench_dataset_id"))}
     df = _sample_df()
     return {
         "source": "bundled",
@@ -255,13 +296,24 @@ def _register_routes(app: FastAPI) -> None:
             kpi_orders = int(len(df))
             kpi_customers = int(df[role_map["customer"]].nunique())
             kpi_products = int(df[role_map["product"]].nunique())
+            # Date range subtitle for the KPI tiles ("Nov 2024 – Apr 2025")
+            dates = pd.to_datetime(df[role_map["date"]], errors="coerce").dropna()
+            date_range = (f"{dates.min().strftime('%b %Y')} – "
+                          f"{dates.max().strftime('%b %Y')}") if len(dates) else ""
         except Exception:
             kpi_revenue = kpi_orders = kpi_customers = kpi_products = 0
+            date_range = ""
+
+        # Chart data — server-rendered, ready for Chart.js to consume.
+        charts = _build_demo_charts(df, role_map)
+
         return _render(
             request, "demo.html",
             preview_rows=head, columns=cols,
             kpi_revenue=kpi_revenue, kpi_orders=kpi_orders,
             kpi_customers=kpi_customers, kpi_products=kpi_products,
+            date_range=date_range,
+            charts=charts,
         )
 
     @app.get("/workbench", response_class=HTMLResponse)
@@ -355,6 +407,86 @@ def _register_routes(app: FastAPI) -> None:
         user = _require_user(request)
         return _render(request, "run_agent.html", user=user)
 
+    @app.get("/settings", response_class=HTMLResponse)
+    async def settings_page(request: Request):
+        user = _require_user(request)
+        from agent import db
+        connectors = db.list_user_connectors(user)
+        return _render(request, "settings.html",
+                       user=user, connectors=connectors)
+
+    @app.get("/api/connectors", response_class=JSONResponse)
+    async def api_connectors_list(request: Request):
+        user = _require_user(request)
+        from agent import db
+        return {"connectors": db.list_user_connectors(user)}
+
+    @app.post("/api/connectors/save", response_class=JSONResponse)
+    async def api_connectors_save(request: Request,
+                                   payload: Dict[str, Any] = Body(...)):
+        user = _require_user(request)
+        kind  = (payload.get("kind") or "").strip()
+        value = (payload.get("value") or "").strip()
+        if kind not in ("slack_webhook",):
+            raise HTTPException(400, f"unsupported kind: {kind!r}")
+        if not value:
+            raise HTTPException(400, "value is required")
+        if kind == "slack_webhook" and not value.startswith("https://hooks.slack.com/"):
+            raise HTTPException(400,
+                "slack_webhook must start with https://hooks.slack.com/")
+        from agent import db
+        from agent.secret import encrypt
+        db.upsert_user_connector(username=user, kind=kind,
+                                  value_encrypted=encrypt(value))
+        return {"ok": True, "kind": kind}
+
+    @app.post("/api/connectors/delete", response_class=JSONResponse)
+    async def api_connectors_delete(request: Request,
+                                     payload: Dict[str, Any] = Body(...)):
+        user = _require_user(request)
+        kind = (payload.get("kind") or "").strip()
+        if not kind:
+            raise HTTPException(400, "kind is required")
+        from agent import db
+        if not db.delete_user_connector(user, kind):
+            raise HTTPException(404, "connector not configured")
+        return {"ok": True, "kind": kind}
+
+    @app.post("/api/connectors/test", response_class=JSONResponse)
+    async def api_connectors_test(request: Request,
+                                   payload: Dict[str, Any] = Body(default={})):
+        """Send a real test ping to the user's configured Slack webhook."""
+        user = _require_user(request)
+        kind = (payload.get("kind") or "slack_webhook").strip()
+        from agent import db
+        from agent.secret import decrypt
+        token = db.get_user_connector(user, kind)
+        if not token:
+            raise HTTPException(404, "connector not configured")
+        value = decrypt(token)
+        if not value:
+            raise HTTPException(500, "stored value could not be decrypted "
+                                "(LIVEOPS_FERNET_KEY may have changed)")
+        if kind == "slack_webhook":
+            import urllib.request as _u, json as _j
+            text = (f"✅ LiveOps Agent test ping from @{user} — your Slack "
+                    f"connector is wired up correctly.")
+            req = _u.Request(value, method="POST",
+                              headers={"Content-Type": "application/json"},
+                              data=_j.dumps({"text": text}).encode("utf-8"))
+            try:
+                with _u.urlopen(req, timeout=10) as resp:
+                    body_text = resp.read(2000).decode("utf-8", "replace")
+                    if resp.status >= 300:
+                        raise HTTPException(502,
+                            f"slack returned {resp.status}: {body_text[:200]}")
+                    return {"ok": True, "status": resp.status, "body": body_text}
+            except HTTPException:
+                raise
+            except Exception as e:
+                raise HTTPException(502, f"slack ping failed: {type(e).__name__}: {e}")
+        raise HTTPException(400, f"test not implemented for kind: {kind!r}")
+
     # ---- JSON APIs (called from page JS) -------------------------------- #
     @app.post("/api/agent/ask", response_class=JSONResponse)
     async def api_agent_ask(request: Request, payload: Dict[str, Any] = Body(...)):
@@ -369,11 +501,29 @@ def _register_routes(app: FastAPI) -> None:
         rm = _default_role_map(df)
         result = ask(question, df, role_map=rm, backend=backend)
         body = result.to_dict()
+        body["observations"] = _attach_hints(body.get("observations", []), df, rm)
+        actual_backend = body.get("plan", {}).get("backend", "heuristic")
         body["backend_meta"] = _backend_meta(
-            requested=backend,
-            actual=body.get("plan", {}).get("backend", "heuristic"),
+            requested=backend, actual=actual_backend,
             llm_available=_llm_available(),
         )
+        # Persist the question for logged-in users.  We store the plan and
+        # routing metadata, NOT the answer (could be huge).  Errors are best-
+        # effort — never let DB hiccups break the answer pipeline.
+        user = request.session.get("username")
+        if user:
+            try:
+                from agent import db
+                planned = [s.get("tool", "") for s in body.get("plan", {}).get("steps", [])]
+                ds_meta = _active_meta(request)
+                qid = db.insert_user_question(
+                    username=user, question=question, backend=backend,
+                    actual_backend=actual_backend, planned_tools=planned,
+                    dataset_name=ds_meta.get("name"),
+                )
+                body["question_id"] = qid
+            except Exception:
+                pass
         return _json_safe(body)
 
     @app.post("/api/evals/run", response_class=JSONResponse)
@@ -481,31 +631,60 @@ def _register_routes(app: FastAPI) -> None:
             )
 
         # Persist to disk, atomic-ish (write to .tmp then rename).
-        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        _sweep_old_uploads()
         slug = re.sub(r"[^A-Za-z0-9._-]+", "_", Path(name).stem)[:40] or "upload"
         token = uuid.uuid4().hex[:12]
         out_name = f"{slug}-{token}.csv"
-        out_path = UPLOAD_DIR / out_name
-        tmp_path = out_path.with_suffix(".csv.tmp")
-        df.to_csv(tmp_path, index=False)
-        tmp_path.replace(out_path)
+        user = request.session.get("username")
 
-        # Drop any previous upload for this session.
-        prev = request.session.get("workbench_dataset")
-        if prev and prev != out_name:
-            try: (UPLOAD_DIR / prev).unlink()
-            except OSError: pass
-
-        meta = {
-            "file":   out_name,
-            "name":   name,
-            "n_rows": int(len(df)),
-            "n_cols": int(len(df.columns)),
-            "uploaded_at": int(time.time()),
-        }
-        request.session["workbench_dataset"] = out_name
-        request.session["workbench_dataset_meta"] = meta
+        if user:
+            # Logged-in: persist under per-user dir + DB row.
+            from agent import db
+            target_dir = _user_upload_dir(user)
+            target_dir.mkdir(parents=True, exist_ok=True)
+            out_path = target_dir / out_name
+            tmp_path = out_path.with_suffix(".csv.tmp")
+            df.to_csv(tmp_path, index=False)
+            tmp_path.replace(out_path)
+            ds_id = db.insert_user_dataset(
+                username=user, file=out_name, original_name=name,
+                n_rows=len(df), n_cols=len(df.columns),
+            )
+            meta = {
+                "id":     ds_id,
+                "file":   out_name,
+                "name":   name,
+                "n_rows": int(len(df)),
+                "n_cols": int(len(df.columns)),
+                "uploaded_at": int(time.time()),
+                "persisted":   True,
+            }
+            # Drop any previous session-scoped pointer; we use the DB id now.
+            request.session.pop("workbench_dataset", None)
+            request.session["workbench_dataset_id"]   = ds_id
+            request.session["workbench_dataset_meta"] = meta
+        else:
+            # Anonymous: session-scoped, no DB row.
+            UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+            _sweep_old_uploads()
+            out_path = UPLOAD_DIR / out_name
+            tmp_path = out_path.with_suffix(".csv.tmp")
+            df.to_csv(tmp_path, index=False)
+            tmp_path.replace(out_path)
+            prev = request.session.get("workbench_dataset")
+            if prev and prev != out_name:
+                try: (UPLOAD_DIR / prev).unlink()
+                except OSError: pass
+            meta = {
+                "file":   out_name,
+                "name":   name,
+                "n_rows": int(len(df)),
+                "n_cols": int(len(df.columns)),
+                "uploaded_at": int(time.time()),
+                "persisted":   False,
+            }
+            request.session.pop("workbench_dataset_id", None)
+            request.session["workbench_dataset"]      = out_name
+            request.session["workbench_dataset_meta"] = meta
 
         return _json_safe({
             "ok": True,
@@ -513,17 +692,137 @@ def _register_routes(app: FastAPI) -> None:
             "role_map": rm,
             "head": df.head(8).to_dict("records"),
             "columns": list(df.columns),
+            "profile": _dataset_profile(df, rm),
         })
 
     @app.post("/api/workbench/reset", response_class=JSONResponse)
     async def api_workbench_reset(request: Request):
-        """Drop the upload pointer and any persisted file, return to bundled."""
-        prev = request.session.pop("workbench_dataset", None)
+        """Stop pointing at any upload; return to the bundled dataset.
+
+        For anonymous sessions this also unlinks the uploaded file (it's
+        ephemeral by design).  For logged-in users we keep the file on disk —
+        they can still re-select it from /api/workbench/datasets later.
+        """
+        prev_anon = request.session.pop("workbench_dataset", None)
+        request.session.pop("workbench_dataset_id", None)
         request.session.pop("workbench_dataset_meta", None)
-        if prev:
-            try: (UPLOAD_DIR / prev).unlink()
+        if prev_anon:
+            try: (UPLOAD_DIR / prev_anon).unlink()
             except OSError: pass
         return {"ok": True, "dataset": _active_meta(request)}
+
+    @app.get("/api/workbench/profile", response_class=JSONResponse)
+    async def api_workbench_profile(request: Request):
+        """Return the active dataset's profile + signal-density tips."""
+        df = _active_df(request)
+        rm = _default_role_map(df)
+        return _json_safe({
+            "dataset": _active_meta(request),
+            "profile": _dataset_profile(df, rm),
+        })
+
+    @app.get("/api/workbench/datasets", response_class=JSONResponse)
+    async def api_workbench_datasets(request: Request):
+        """List the logged-in user's persisted datasets (newest first).
+        Anonymous callers get an empty list — they don't have an account."""
+        user = request.session.get("username")
+        if not user:
+            return {"datasets": [], "active_id": None}
+        from agent import db
+        rows = db.list_user_datasets(user)
+        active_id = request.session.get("workbench_dataset_id")
+        return {"datasets": rows, "active_id": active_id}
+
+    @app.post("/api/workbench/select", response_class=JSONResponse)
+    async def api_workbench_select(request: Request,
+                                    payload: Dict[str, Any] = Body(...)):
+        """Switch the active dataset to a previously-saved one (logged-in)."""
+        user = request.session.get("username")
+        if not user:
+            raise HTTPException(401, "log in to use saved datasets")
+        ds_id = payload.get("id")
+        if not ds_id:
+            raise HTTPException(400, "id is required")
+        from agent import db
+        row = db.get_user_dataset(user, int(ds_id))
+        if not row:
+            raise HTTPException(404, "dataset not found")
+        meta = {
+            "id":     row["id"],
+            "file":   row["file"],
+            "name":   row["original_name"],
+            "n_rows": int(row["n_rows"]),
+            "n_cols": int(row["n_cols"]),
+            "uploaded_at": row["uploaded_at"],
+            "persisted":   True,
+        }
+        request.session.pop("workbench_dataset", None)
+        request.session["workbench_dataset_id"]   = int(row["id"])
+        request.session["workbench_dataset_meta"] = meta
+        return {"ok": True, "dataset": {**meta, "source": "upload"}}
+
+    @app.get("/api/agent/history", response_class=JSONResponse)
+    async def api_agent_history(request: Request, limit: int = 50):
+        """Per-user question history. Pinned first, then newest. Anon users
+        get an empty list (not 401) so the UI can omit the panel cleanly."""
+        user = request.session.get("username")
+        if not user:
+            return {"history": []}
+        from agent import db
+        return {"history": db.list_user_questions(user, limit=int(limit))}
+
+    @app.post("/api/agent/pin", response_class=JSONResponse)
+    async def api_agent_pin(request: Request,
+                             payload: Dict[str, Any] = Body(...)):
+        """Toggle pinned on a saved question. Pinned rows survive history clears."""
+        user = request.session.get("username")
+        if not user:
+            raise HTTPException(401, "log in to pin questions")
+        qid = payload.get("id")
+        pinned = bool(payload.get("pinned", True))
+        if not qid:
+            raise HTTPException(400, "id is required")
+        from agent import db
+        if not db.set_user_question_pinned(user, int(qid), pinned):
+            raise HTTPException(404, "question not found")
+        return {"ok": True, "id": int(qid), "pinned": pinned}
+
+    @app.post("/api/agent/history/clear", response_class=JSONResponse)
+    async def api_agent_history_clear(request: Request,
+                                       payload: Dict[str, Any] = Body(default={})):
+        """Wipe history. Pinned rows survive unless `keep_pinned: false`."""
+        user = request.session.get("username")
+        if not user:
+            raise HTTPException(401, "log in to clear history")
+        from agent import db
+        n = db.clear_user_questions(user, keep_pinned=bool(payload.get("keep_pinned", True)))
+        return {"ok": True, "deleted": int(n)}
+
+    @app.post("/api/workbench/delete", response_class=JSONResponse)
+    async def api_workbench_delete(request: Request,
+                                    payload: Dict[str, Any] = Body(...)):
+        """Delete a saved dataset (logged-in only).  If it was active, the
+        session falls back to the bundled dataset on the next read."""
+        user = request.session.get("username")
+        if not user:
+            raise HTTPException(401, "log in to manage saved datasets")
+        ds_id = payload.get("id")
+        if not ds_id:
+            raise HTTPException(400, "id is required")
+        from agent import db
+        file_basename = db.delete_user_dataset(user, int(ds_id))
+        if file_basename is None:
+            raise HTTPException(404, "dataset not found")
+        # Unlink the on-disk file (best effort).
+        try:
+            (_user_upload_dir(user) / file_basename).unlink()
+        except OSError:
+            pass
+        # If the deleted dataset was active, drop the pointer.
+        if request.session.get("workbench_dataset_id") == int(ds_id):
+            request.session.pop("workbench_dataset_id", None)
+            request.session.pop("workbench_dataset_meta", None)
+        return {"ok": True, "deleted_id": int(ds_id)}
 
 
 # --------------------------------------------------------------------------- #
@@ -646,6 +945,341 @@ def _json_safe(obj: Any) -> Any:
     if isinstance(obj, (list, tuple)):
         return [_json_safe(v) for v in obj]
     return obj
+
+
+# Signal-density floors per analytic tool. If the dataset doesn't clear the
+# threshold, the workbench surfaces a tip telling the user the tool's output
+# will be unreliable — no point asking "show me cohort retention" when there
+# are 4 customers in the file.
+_SIGNAL_FLOORS = (
+    # (key, message)
+    ("customers_for_segments",
+     50, "fewer than 50 customers — RFM segments will be noisy or collapse to one bucket"),
+    ("days_for_trend",
+     30, "fewer than 30 days of order history — weekly trends will be too short to read"),
+    ("orders_for_elasticity",
+     200, "fewer than 200 orders — price-elasticity needs more price/quantity pairs to fit reliably"),
+    ("skus_for_quadrants",
+     8,  "fewer than 8 SKUs — BCG quadrants won't separate cleanly"),
+    ("repeat_for_cohorts",
+     0.20, "less than 20% of customers have a second purchase — cohort retention curves will collapse to zero"),
+)
+
+
+def _dataset_profile(df: pd.DataFrame, role_map: Dict[str, str]) -> Dict[str, Any]:
+    """A one-page summary of an uploaded dataset so users can judge whether
+    the tools have anything to chew on before they ask questions.
+
+    Returns a dict with three top-level keys:
+      - "shape":   row/col counts, KPI numbers, date range
+      - "columns": one row per column (dtype, null %, sample, distinct count)
+      - "tips":    signal-density warnings keyed to specific tools
+    """
+    profile: Dict[str, Any] = {
+        "shape":   {"n_rows": int(len(df)), "n_cols": int(len(df.columns))},
+        "columns": [],
+        "tips":    [],
+        "kpis":    {},
+        "role_map": role_map,
+    }
+
+    # ---- Per-column profile --------------------------------------------- #
+    n = max(1, len(df))
+    for col in df.columns:
+        s = df[col]
+        dtype = str(s.dtype)
+        nulls = int(s.isna().sum())
+        # cap distinct count work — for high-cardinality columns we just need
+        # an upper bound, not an exact number.
+        try:
+            n_unique = int(s.nunique(dropna=True))
+        except Exception:
+            n_unique = -1
+        sample = next((str(v) for v in s.dropna().head(3).tolist()), "")
+        profile["columns"].append({
+            "name":        col,
+            "dtype":       dtype,
+            "null_pct":    round(nulls / n * 100, 1),
+            "n_unique":    n_unique,
+            "sample":      sample[:40],
+            "role":        next((k for k, v in role_map.items() if v == col), None),
+        })
+
+    # ---- KPIs (only when role_map allows) ------------------------------- #
+    try:
+        if "amount" in role_map:
+            profile["kpis"]["total_revenue"] = float(df[role_map["amount"]].sum())
+        if "customer" in role_map:
+            profile["kpis"]["n_customers"] = int(df[role_map["customer"]].nunique())
+        if "product" in role_map:
+            profile["kpis"]["n_products"] = int(df[role_map["product"]].nunique())
+        if "date" in role_map:
+            dates = pd.to_datetime(df[role_map["date"]], errors="coerce").dropna()
+            if len(dates):
+                profile["kpis"]["date_min"]  = dates.min().strftime("%Y-%m-%d")
+                profile["kpis"]["date_max"]  = dates.max().strftime("%Y-%m-%d")
+                profile["kpis"]["date_span"] = int((dates.max() - dates.min()).days)
+        profile["kpis"]["n_orders"] = int(len(df))
+    except Exception:
+        pass
+
+    # ---- Signal-density tips -------------------------------------------- #
+    k = profile["kpis"]
+    tips = profile["tips"]
+    if "customer" in role_map and k.get("n_customers", 9999) < 50:
+        tips.append({
+            "tool": "segment_customers",
+            "severity": "warn",
+            "message": f"Only {k['n_customers']} unique customers — RFM segments need ≥50 to form meaningful buckets.",
+        })
+    if "date" in role_map and k.get("date_span", 9999) < 30:
+        tips.append({
+            "tool": "revenue_by_period",
+            "severity": "warn",
+            "message": f"Only {k.get('date_span', 0)} days of order history — weekly trend will be too short to interpret.",
+        })
+    if k.get("n_orders", 9999) < 200:
+        tips.append({
+            "tool": "price_elasticity",
+            "severity": "warn",
+            "message": f"Only {k['n_orders']} orders — price-elasticity needs ≥200 price/quantity pairs to fit a reliable slope.",
+        })
+    if "product" in role_map and k.get("n_products", 9999) < 8:
+        tips.append({
+            "tool": "product_quadrants",
+            "severity": "info",
+            "message": f"Only {k['n_products']} SKUs — BCG quadrants will look sparse with this few products.",
+        })
+    if "customer" in role_map and k.get("n_customers", 0) >= 1:
+        try:
+            counts = df[role_map["customer"]].value_counts()
+            repeat_pct = float((counts > 1).mean())
+            if repeat_pct < 0.20:
+                tips.append({
+                    "tool": "cohort_retention",
+                    "severity": "warn",
+                    "message": f"Only {repeat_pct*100:.0f}% of customers have a second order — retention curves will collapse to near-zero.",
+                })
+        except Exception:
+            pass
+
+    return profile
+
+
+def _observation_hint(tool: str, result: Any,
+                      df: pd.DataFrame,
+                      role_map: Dict[str, str]) -> Optional[str]:
+    """Return a one-sentence explanation when a tool's result looks degenerate.
+
+    Real-world test: an analyst uploads 10 rows of orders, asks "show me
+    cohort retention", gets back `{}`, and walks away thinking the tool is
+    broken. With a hint, they see "Your dataset spans 4 days — cohort
+    retention curves need at least one full month per cohort."
+    """
+    # Pass through tool errors untouched; they already contain the message.
+    if isinstance(result, dict) and "error" in result:
+        return None
+
+    n_orders    = len(df)
+    n_customers = int(df[role_map["customer"]].nunique()) if "customer" in role_map else 0
+    n_products  = int(df[role_map["product"]].nunique())  if "product"  in role_map else 0
+    date_span = 0
+    if "date" in role_map:
+        try:
+            d = pd.to_datetime(df[role_map["date"]], errors="coerce").dropna()
+            date_span = int((d.max() - d.min()).days) if len(d) else 0
+        except Exception:
+            pass
+
+    # ---- per-tool degenerate-output detection --------------------------- #
+
+    if tool == "revenue_by_period":
+        if isinstance(result, list):
+            if not result:
+                return ("No periods produced — the date column may not be "
+                        "parseable or the amount column is all zero.")
+            if len(result) < 4:
+                return (f"Only {len(result)} periods in the result — "
+                        "the dataset's date span is too short to read a trend.")
+        return None
+
+    if tool == "top_products":
+        if isinstance(result, list):
+            if not result:
+                return "No products to rank — check that product and amount columns parse."
+            if len(result) == 1:
+                return "Only one SKU appears in the data — there's nothing to rank."
+            if n_products and len(result) >= n_products:
+                # Asked for top-N but the dataset only has N or fewer SKUs.
+                if n_products < 5:
+                    return (f"Your dataset has only {n_products} unique SKUs, "
+                            "so the ranking is the full catalog.")
+        return None
+
+    if tool == "top_customers":
+        if isinstance(result, list):
+            if not result:
+                return "No customers to rank — check that customer and amount columns parse."
+            if len(result) == 1:
+                return "Only one customer appears in the data — there's nothing to rank."
+        return None
+
+    if tool == "segment_customers":
+        if isinstance(result, dict):
+            if not result:
+                return "No segments formed — the RFM scorer needs more customers and orders."
+            if len(result) == 1:
+                only = next(iter(result))
+                return (f"Every customer landed in the same segment ('{only}') — "
+                        "there's not enough variance in recency/frequency/spend to split them.")
+            total = sum(result.values()) if all(isinstance(v, (int, float)) for v in result.values()) else 0
+            if total and total < 50:
+                return (f"Only {total} customers segmented — buckets are too small "
+                        "to act on individually.")
+        return None
+
+    if tool == "product_quadrants":
+        if isinstance(result, dict):
+            if not result:
+                return "No quadrants assigned — too few SKUs or no revenue/volume signal."
+            if len(result) == 1:
+                only = next(iter(result))
+                return (f"All SKUs landed in '{only}' — there's no separation "
+                        "in revenue × volume to fill the other quadrants.")
+            if n_products and n_products < 8:
+                return (f"Only {n_products} SKUs in the catalog — quadrants will look "
+                        "sparse with this few products.")
+        return None
+
+    if tool == "co_purchases":
+        if isinstance(result, list) and not result:
+            return ("No co-purchase pairs found — most orders contain only a "
+                    "single product, or order_id is unique per row instead of "
+                    "shared across line items.")
+        return None
+
+    if tool == "price_elasticity":
+        if isinstance(result, dict):
+            if not result:
+                return ("Couldn't fit elasticity — need at least a few price points "
+                        "for the same SKU. Verify your price/quantity columns.")
+            # The tool may emit per-SKU rows; if none have a meaningful slope, hint.
+            slopes = [abs(v.get("elasticity", 0)) for v in result.values()
+                      if isinstance(v, dict)]
+            if slopes and max(slopes) < 0.05:
+                return ("Elasticity slopes are all near zero — your dataset "
+                        "doesn't show much price variation per SKU.")
+        return None
+
+    if tool == "churn_risk":
+        if isinstance(result, dict) and result:
+            total = sum(result.values()) if all(isinstance(v, (int, float))
+                                                 for v in result.values()) else 0
+            if total:
+                active = result.get("Active", 0)
+                churned = result.get("Churned", 0)
+                if active / total >= 0.99:
+                    return ("Everyone is Active — every customer has ordered "
+                            "within the recency window. Try a longer lookback "
+                            "or a dataset with older customers.")
+                if churned / total >= 0.80:
+                    return ("Most customers are Churned — the dataset's most "
+                            "recent order is far in the past, so the recency "
+                            "window catches almost no one.")
+        return None
+
+    if tool == "cohort_retention":
+        if isinstance(result, dict):
+            if not result:
+                if date_span < 60:
+                    return (f"Only {date_span} days of order history — cohort "
+                            "retention needs at least 2 months to compute a curve.")
+                return ("No cohorts produced — verify the customer and date "
+                        "columns parse correctly.")
+            # All retention values zero across all periods -> dead curves.
+            try:
+                all_zero = all(
+                    all(float(v or 0) == 0 for v in (period or {}).values())
+                    for period in result.values() if isinstance(period, dict)
+                )
+                if all_zero:
+                    return ("All cohort retention values are 0 — no customers "
+                            "have a second purchase in any month.")
+            except Exception:
+                pass
+        return None
+
+    return None
+
+
+def _attach_hints(observations: List[Dict[str, Any]],
+                  df: pd.DataFrame,
+                  role_map: Dict[str, str]) -> List[Dict[str, Any]]:
+    """Return a copy of `observations` with a `hint` field added per row when
+    the result is degenerate. Hints are intentionally optional — the absence
+    of a hint means "the result is meaningful, no caveat needed."""
+    out = []
+    for o in observations:
+        h = _observation_hint(o.get("tool", ""), o.get("result"), df, role_map)
+        out.append({**o, **({"hint": h} if h else {})})
+    return out
+
+
+def _build_demo_charts(df: pd.DataFrame,
+                       role_map: Dict[str, str]) -> Dict[str, Any]:
+    """Pre-compute the three /demo charts server-side so the page renders
+    instantly without a JS round-trip.  Returns shapes Chart.js consumes
+    directly (label arrays + numeric arrays) — never raises; on failure each
+    chart is silently set to None and the template hides it.
+
+    The analyst tools live in `analyst.agent.TOOLS` (not `analyst.analysis`),
+    so we go through the registry to keep behaviour identical to /workbench.
+    """
+    from analyst.agent import TOOLS
+    out: Dict[str, Any] = {"revenue": None, "top_products": None, "churn": None}
+
+    def _run(tool: str, **kw):
+        spec = TOOLS.get(tool)
+        return spec.fn(df, role_map, **kw) if spec else None
+
+    # ---- Weekly revenue trend ---------------------------------------- #
+    try:
+        rev = _run("revenue_by_period", freq="W")
+        # Tool returns list[{period, revenue, ...}].
+        if isinstance(rev, list) and rev:
+            out["revenue"] = {
+                "labels": [str(r.get("period", "")) for r in rev],
+                "values": [float(r.get("revenue", 0)) for r in rev],
+            }
+    except Exception:
+        pass
+
+    # ---- Top 5 products ---------------------------------------------- #
+    try:
+        tp = _run("top_products", n=5)
+        if isinstance(tp, list) and tp:
+            out["top_products"] = {
+                "labels": [str(r.get("product") or r.get("product_id") or "") for r in tp],
+                "values": [float(r.get("revenue", 0)) for r in tp],
+            }
+    except Exception:
+        pass
+
+    # ---- Churn-tier breakdown ---------------------------------------- #
+    try:
+        ch = _run("churn_risk")
+        # Returns {tier: count}
+        if isinstance(ch, dict) and ch:
+            order = ["Active", "Cooling", "At-Risk", "Churned"]
+            keys = [k for k in order if k in ch] + [k for k in ch if k not in order]
+            out["churn"] = {
+                "labels": keys,
+                "values": [int(ch[k]) for k in keys],
+            }
+    except Exception:
+        pass
+
+    return out
 
 
 def _backend_meta(*, requested: str, actual: str,

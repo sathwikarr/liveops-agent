@@ -61,8 +61,164 @@
            x-text="uploadError"></div>
     </template>
     <p class="mt-2 text-[11px] text-slate-500">
-      CSV / Parquet up to 5 MB. Must include an order-date column and an amount column. Uploads live in your session and disappear after a few hours.
+      CSV / Parquet up to 5 MB. Must include an order-date column and an amount column.
+      {% if username %}
+        Saved to your account as <strong class="text-slate-300">@{{ username }}</strong> — they survive logout.
+      {% else %}
+        <a href="/login" class="text-accent-400 underline-offset-2 hover:underline">Log in</a> to save uploads across sessions.
+      {% endif %}
     </p>
+
+    {% if username %}
+    <!-- ============================================================ -->
+    <!-- MY DATASETS · saved uploads switcher (logged-in only)         -->
+    <!-- ============================================================ -->
+    <div class="mt-3" x-init="loadDatasets()">
+      <button type="button"
+              @click="datasetsOpen = !datasetsOpen; if (datasetsOpen) loadDatasets()"
+              class="inline-flex items-center gap-2 text-xs font-medium text-slate-300 hover:text-white">
+        <svg viewBox="0 0 16 16" class="h-3 w-3 transition" :class="datasetsOpen ? 'rotate-90' : ''"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 3l6 5-6 5"/>
+        </svg>
+        <span>My datasets</span>
+        <span class="text-slate-500" x-text="'(' + (datasets.length || 0) + ')'"></span>
+      </button>
+
+      <div x-show="datasetsOpen" x-cloak class="mt-3 glass rounded-xl p-4">
+        <template x-if="!datasets.length">
+          <div class="py-3 text-center text-xs text-slate-500">
+            No saved datasets yet — upload a CSV to start.
+          </div>
+        </template>
+
+        <template x-if="datasets.length">
+          <ul class="divide-y divide-white/5">
+            <template x-for="d in datasets" :key="d.id">
+              <li class="flex items-center justify-between gap-3 py-2">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <code class="truncate font-mono text-xs text-slate-200" x-text="d.original_name"></code>
+                    <template x-if="dataset.id === d.id">
+                      <span class="rounded-md border border-accent-500/30 bg-accent-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-widest text-accent-400">active</span>
+                    </template>
+                  </div>
+                  <div class="mt-0.5 text-[11px] text-slate-500">
+                    <span x-text="d.n_rows.toLocaleString() + ' rows · ' + d.n_cols + ' cols'"></span>
+                    <span class="mx-1">·</span>
+                    <span x-text="d.uploaded_at.replace('T', ' ')"></span>
+                  </div>
+                </div>
+                <div class="flex flex-shrink-0 gap-1">
+                  <button type="button" @click="selectDataset(d.id)"
+                          :disabled="dataset.id === d.id"
+                          class="rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-slate-300 transition hover:border-accent-500/40 hover:text-accent-400 disabled:opacity-40">
+                    Use
+                  </button>
+                  <button type="button" @click="deleteDataset(d.id)"
+                          class="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-slate-400 transition hover:border-rose2-500/40 hover:text-rose2-400"
+                          aria-label="Delete">
+                    ×
+                  </button>
+                </div>
+              </li>
+            </template>
+          </ul>
+        </template>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- DATASET PROFILE PANEL · expandable, populated lazily          -->
+    <!-- ============================================================ -->
+    <div class="mt-3">
+      <button type="button"
+              @click="profileOpen = !profileOpen; if (profileOpen && !profile) loadProfile()"
+              class="inline-flex items-center gap-2 text-xs font-medium text-slate-300 hover:text-white">
+        <svg viewBox="0 0 16 16" class="h-3 w-3 transition" :class="profileOpen ? 'rotate-90' : ''"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 3l6 5-6 5"/>
+        </svg>
+        <span x-text="profileOpen ? 'Hide dataset profile' : 'Show dataset profile'"></span>
+      </button>
+
+      <div x-show="profileOpen" x-cloak class="mt-3 glass rounded-xl p-5 space-y-5">
+        <template x-if="profileLoading">
+          <div class="text-xs text-slate-500">Profiling…</div>
+        </template>
+
+        <template x-if="profile">
+          <div>
+            <!-- KPI strip -->
+            <div class="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-white/5 bg-white/[0.02] md:grid-cols-4">
+              <template x-for="kpi in profileKpiTiles()" :key="kpi.label">
+                <div class="bg-ink-900/60 p-3">
+                  <div class="text-[10px] uppercase tracking-widest text-slate-500" x-text="kpi.label"></div>
+                  <div class="mt-1 font-display text-base font-semibold text-white" x-text="kpi.value"></div>
+                </div>
+              </template>
+            </div>
+
+            <!-- Signal-density tips -->
+            <template x-if="profile.tips && profile.tips.length">
+              <div class="mt-4 space-y-1.5">
+                <div class="text-[11px] uppercase tracking-widest text-slate-500">Signal-density tips</div>
+                <template x-for="tip in profile.tips" :key="tip.tool">
+                  <div :class="tip.severity === 'warn'
+                                ? 'border-amber-500/40 bg-amber-500/[0.06] text-amber-300'
+                                : 'border-white/10 bg-white/[0.03] text-slate-300'"
+                       class="flex items-start gap-2 rounded-md border p-2.5 text-xs">
+                    <code class="rounded bg-white/5 px-1.5 py-0.5 font-mono" x-text="tip.tool"></code>
+                    <span x-text="tip.message"></span>
+                  </div>
+                </template>
+              </div>
+            </template>
+
+            <!-- Per-column table -->
+            <div class="mt-4">
+              <div class="text-[11px] uppercase tracking-widest text-slate-500">Columns</div>
+              <div class="mt-1.5 max-h-72 overflow-auto rounded-md border border-white/5">
+                <table class="min-w-full text-xs">
+                  <thead class="sticky top-0 bg-white/[0.04] text-[10px] uppercase tracking-widest text-slate-500 backdrop-blur">
+                    <tr>
+                      <th class="px-3 py-2 text-left font-medium">column</th>
+                      <th class="px-3 py-2 text-left font-medium">role</th>
+                      <th class="px-3 py-2 text-left font-medium">dtype</th>
+                      <th class="px-3 py-2 text-right font-medium">distinct</th>
+                      <th class="px-3 py-2 text-right font-medium">nulls</th>
+                      <th class="px-3 py-2 text-left font-medium">sample</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-white/5">
+                    <template x-for="col in profile.columns" :key="col.name">
+                      <tr class="hover:bg-white/[0.02]">
+                        <td class="px-3 py-2 font-mono text-slate-300" x-text="col.name"></td>
+                        <td class="px-3 py-2">
+                          <template x-if="col.role">
+                            <code class="rounded bg-accent-500/15 px-1.5 py-0.5 font-mono text-[10px] text-accent-400" x-text="col.role"></code>
+                          </template>
+                          <template x-if="!col.role">
+                            <span class="text-slate-600">—</span>
+                          </template>
+                        </td>
+                        <td class="px-3 py-2 font-mono text-slate-400" x-text="col.dtype"></td>
+                        <td class="px-3 py-2 text-right tabular-nums text-slate-300" x-text="col.n_unique.toLocaleString()"></td>
+                        <td class="px-3 py-2 text-right tabular-nums"
+                            :class="col.null_pct > 5 ? 'text-amber-400' : 'text-slate-400'"
+                            x-text="col.null_pct.toFixed(1) + '%'"></td>
+                        <td class="px-3 py-2 truncate font-mono text-slate-500" x-text="col.sample"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
   </section>
 
   <!-- Ask box + answer -->
@@ -184,7 +340,22 @@
                 <summary class="cursor-pointer text-sm">
                   <code class="font-mono text-xs text-accent-400" x-text="obs.tool"></code>
                   <span class="ml-2 text-xs text-slate-500" x-text="summarise(obs.result)"></span>
+                  <template x-if="obs.hint">
+                    <span class="ml-2 inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-widest text-amber-400">
+                      <svg viewBox="0 0 16 16" class="h-2.5 w-2.5" fill="currentColor"><circle cx="8" cy="8" r="4"/></svg>
+                      hint
+                    </span>
+                  </template>
                 </summary>
+                <template x-if="obs.hint">
+                  <div class="mt-2 flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/[0.06] p-2.5 text-xs text-amber-300">
+                    <svg viewBox="0 0 24 24" class="mt-0.5 h-3.5 w-3.5 flex-shrink-0" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+                    </svg>
+                    <span x-text="obs.hint"></span>
+                  </div>
+                </template>
                 <pre class="mt-2 max-h-72 overflow-auto rounded-md bg-ink-950/80 p-3 font-mono text-xs text-slate-300" x-text="JSON.stringify(obs.result, null, 2)"></pre>
               </details>
             </template>
@@ -222,6 +393,50 @@
           and scored on tool-match, args-match, no-forbidden, and must-succeed. CI fails on any &gt;2pp regression.
         </p>
       </div>
+
+      {% if username %}
+      <!-- ========================================================== -->
+      <!-- RECENT QUESTIONS · per-user, pinnable                       -->
+      <!-- ========================================================== -->
+      <div class="glass rounded-xl p-6" x-init="loadHistory()">
+        <div class="flex items-center justify-between">
+          <div class="font-display font-semibold text-white">Recent questions</div>
+          <button type="button" @click="clearHistory()"
+                  x-show="history.length"
+                  class="text-[11px] text-slate-500 hover:text-rose2-400">
+            Clear unpinned
+          </button>
+        </div>
+        <template x-if="!history.length">
+          <p class="mt-2 text-xs text-slate-500">
+            Your past questions will appear here. Pin the ones you want to keep.
+          </p>
+        </template>
+        <ul x-show="history.length" class="mt-3 divide-y divide-white/5 text-sm">
+          <template x-for="h in history" :key="h.id">
+            <li class="flex items-start gap-2 py-2">
+              <button type="button" @click="togglePin(h)"
+                      :class="h.pinned ? 'text-amber-400' : 'text-slate-600 hover:text-slate-300'"
+                      class="mt-0.5 transition" aria-label="Pin">
+                <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="currentColor">
+                  <path d="M5.5 1l-1 4H2l4 3-1.5 5L8 10l3.5 3L10 8l4-3h-2.5l-1-4z"/>
+                </svg>
+              </button>
+              <button type="button" @click="rerun(h)" class="min-w-0 flex-1 text-left group">
+                <div class="truncate text-slate-200 group-hover:text-white" x-text="h.question"></div>
+                <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
+                  <code class="font-mono" x-text="(h.planned_tools || []).join(' · ') || 'no plan'"></code>
+                  <span>·</span>
+                  <span x-text="h.actual_backend || h.backend"></span>
+                  <span x-show="h.dataset_name">·</span>
+                  <span x-show="h.dataset_name" class="truncate" x-text="h.dataset_name"></span>
+                </div>
+              </button>
+            </li>
+          </template>
+        </ul>
+      </div>
+      {% endif %}
     </div>
   </aside>
 </div>
@@ -239,6 +454,15 @@
       dataset: {{ dataset|tojson }},
       uploading: false,
       uploadError: null,
+      // Dataset profile panel state
+      profileOpen: false,
+      profile: null,
+      profileLoading: false,
+      // Saved-datasets switcher (logged-in only)
+      datasets: [],
+      datasetsOpen: false,
+      // Question history (logged-in only)
+      history: [],
       examples: [
         'top 5 products by revenue',
         'who is about to churn?',
@@ -272,6 +496,8 @@
           this.result = await res.json();
           // Wait for x-for canvases to mount, then render Chart.js into each.
           this.$nextTick(() => this.renderCharts());
+          // Refresh the history sidebar so the new question shows up.
+          if (this.loadHistory) this.loadHistory();
         } catch (e) { this.error = e.message; }
         finally { this.loading = false; }
       },
@@ -475,7 +701,9 @@
             throw new Error(body.detail || ('HTTP ' + res.status));
           }
           this.dataset = body.dataset;
-          this.result = null;        // stale relative to the new dataset
+          this.profile = body.profile || null;   // profile rides along with the upload response
+          this.profileOpen = true;               // auto-expand on fresh upload
+          this.result = null;                    // stale relative to the new dataset
         } catch (e) {
           this.uploadError = e.message;
         } finally {
@@ -488,8 +716,113 @@
           const body = await res.json();
           if (!res.ok) throw new Error('reset failed');
           this.dataset = body.dataset;
-          this.result = null;
+          this.profile = null;
+          this.result  = null;
         } catch (e) { this.uploadError = e.message; }
+      },
+      // ---- question history (logged-in only) ----
+      async loadHistory() {
+        try {
+          const r = await fetch('/api/agent/history?limit=30');
+          if (!r.ok) return;
+          const body = await r.json();
+          this.history = body.history || [];
+        } catch (e) { /* ignore */ }
+      },
+      async togglePin(h) {
+        try {
+          const r = await fetch('/api/agent/pin', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: h.id, pinned: !h.pinned }),
+          });
+          if (!r.ok) throw new Error('pin failed');
+          await this.loadHistory();
+        } catch (e) { this.error = e.message; }
+      },
+      async clearHistory() {
+        if (!confirm('Clear unpinned history? Pinned questions stay.')) return;
+        try {
+          await fetch('/api/agent/history/clear', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ keep_pinned: true }),
+          });
+          await this.loadHistory();
+        } catch (e) { this.error = e.message; }
+      },
+      async rerun(h) {
+        // Re-fire the question with the same backend.
+        this.question = h.question;
+        this.backend  = h.backend || 'heuristic';
+        await this.ask();
+      },
+
+      // ---- saved datasets (logged-in only) ----
+      async loadDatasets() {
+        try {
+          const r = await fetch('/api/workbench/datasets');
+          if (!r.ok) return;
+          const body = await r.json();
+          this.datasets = body.datasets || [];
+        } catch (e) { /* anon users hit 200 with empty list; nothing to do */ }
+      },
+      async selectDataset(id) {
+        try {
+          const r = await fetch('/api/workbench/select', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+          });
+          const body = await r.json();
+          if (!r.ok) throw new Error(body.detail || 'select failed');
+          this.dataset = body.dataset;
+          this.profile = null;
+          this.result  = null;
+          await this.loadDatasets();
+        } catch (e) { this.uploadError = e.message; }
+      },
+      async deleteDataset(id) {
+        try {
+          const r = await fetch('/api/workbench/delete', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+          });
+          const body = await r.json();
+          if (!r.ok) throw new Error(body.detail || 'delete failed');
+          // If we just deleted the active one, refresh metadata too.
+          if (this.dataset && this.dataset.id === id) {
+            const m = await fetch('/api/workbench/profile').then(r => r.json());
+            this.dataset = m.dataset; this.profile = m.profile; this.result = null;
+          }
+          await this.loadDatasets();
+        } catch (e) { this.uploadError = e.message; }
+      },
+      async loadProfile() {
+        this.profileLoading = true;
+        try {
+          const r = await fetch('/api/workbench/profile');
+          const body = await r.json();
+          this.profile = body.profile || null;
+        } catch (e) {
+          this.uploadError = 'failed to load profile: ' + e.message;
+        } finally {
+          this.profileLoading = false;
+        }
+      },
+      // KPI tiles rendered above the column table — pulled from profile.kpis.
+      profileKpiTiles() {
+        if (!this.profile || !this.profile.kpis) return [];
+        const k = this.profile.kpis;
+        const fmt = (n) => n == null ? '—' : Number(n).toLocaleString();
+        const money = (n) => n == null ? '—' : '$' + Math.round(Number(n)).toLocaleString();
+        const tiles = [];
+        if (k.n_orders    != null) tiles.push({ label: 'orders',     value: fmt(k.n_orders) });
+        if (k.n_customers != null) tiles.push({ label: 'customers',  value: fmt(k.n_customers) });
+        if (k.n_products  != null) tiles.push({ label: 'products',   value: fmt(k.n_products) });
+        if (k.total_revenue != null) tiles.push({ label: 'revenue',  value: money(k.total_revenue) });
+        if (k.date_min && k.date_max)
+          tiles.push({ label: 'date range', value: k.date_min + ' → ' + k.date_max });
+        if (k.date_span != null)
+          tiles.push({ label: 'span',       value: k.date_span + ' days' });
+        return tiles;
       },
     };
   }

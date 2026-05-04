@@ -69,6 +69,46 @@ CREATE TABLE IF NOT EXISTS notifications (
     severity   TEXT
 );
 CREATE INDEX IF NOT EXISTS ix_notifications_ts ON notifications(ts);
+
+-- Per-user persisted workbench uploads.  The on-disk file lives under
+-- user_data/workbench_uploads/<username>/<file>.  This table is the index.
+CREATE TABLE IF NOT EXISTS user_datasets (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    username      TEXT NOT NULL,
+    file          TEXT NOT NULL,         -- on-disk basename, unique per user
+    original_name TEXT NOT NULL,         -- what the user uploaded
+    n_rows        INTEGER NOT NULL,
+    n_cols        INTEGER NOT NULL,
+    uploaded_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_user_datasets_user ON user_datasets(username, uploaded_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_user_datasets_user_file ON user_datasets(username, file);
+
+-- Per-user question history. Stores the question + the planned tools, NOT
+-- the full answer (those can be huge). Pinned rows are never auto-pruned.
+CREATE TABLE IF NOT EXISTS user_questions (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    username       TEXT NOT NULL,
+    question       TEXT NOT NULL,
+    backend        TEXT NOT NULL,
+    actual_backend TEXT,
+    planned_tools  TEXT,          -- JSON array
+    dataset_name   TEXT,          -- which dataset was active when asked
+    pinned         INTEGER NOT NULL DEFAULT 0,
+    asked_at       TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_user_questions_user_ts
+    ON user_questions(username, pinned DESC, asked_at DESC);
+
+-- Per-user encrypted connector credentials (Slack webhooks, SMTP creds, …).
+-- The `value_encrypted` column holds a Fernet token; never store plaintext.
+CREATE TABLE IF NOT EXISTS user_connectors (
+    username        TEXT NOT NULL,
+    kind            TEXT NOT NULL,        -- slack_webhook, smtp_host, etc.
+    value_encrypted BLOB NOT NULL,
+    updated_at      TEXT NOT NULL,
+    PRIMARY KEY (username, kind)
+);
 """
 
 
@@ -124,6 +164,201 @@ def list_usernames() -> list[str]:
     with connect() as conn:
         rows = conn.execute("SELECT username FROM users ORDER BY username").fetchall()
         return [r["username"] for r in rows]
+
+
+# ---------------------------- user datasets --------------------------------
+
+def insert_user_dataset(*, username: str, file: str, original_name: str,
+                        n_rows: int, n_cols: int) -> int:
+    """Persist an uploaded dataset and return the new row id.  Raises
+    sqlite3.IntegrityError if (username, file) already exists."""
+    init_db()
+    with connect() as conn:
+        cur = conn.execute(
+            "INSERT INTO user_datasets(username, file, original_name, "
+            "n_rows, n_cols, uploaded_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (username, file, original_name, int(n_rows), int(n_cols), _now()),
+        )
+        return int(cur.lastrowid)
+
+
+def list_user_datasets(username: str) -> list[dict]:
+    """Newest first."""
+    init_db()
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT id, file, original_name, n_rows, n_cols, uploaded_at "
+            "FROM user_datasets WHERE username = ? ORDER BY uploaded_at DESC",
+            (username,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_user_dataset(username: str, dataset_id: int) -> Optional[dict]:
+    init_db()
+    with connect() as conn:
+        r = conn.execute(
+            "SELECT id, file, original_name, n_rows, n_cols, uploaded_at "
+            "FROM user_datasets WHERE username = ? AND id = ?",
+            (username, int(dataset_id)),
+        ).fetchone()
+        return dict(r) if r else None
+
+
+# ---------------------------- user connectors ------------------------------
+
+def upsert_user_connector(*, username: str, kind: str,
+                          value_encrypted: bytes) -> None:
+    """Insert or update an encrypted connector value for a user."""
+    init_db()
+    with connect() as conn:
+        conn.execute(
+            "INSERT INTO user_connectors(username, kind, value_encrypted, updated_at) "
+            "VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(username, kind) DO UPDATE SET "
+            "  value_encrypted = excluded.value_encrypted, "
+            "  updated_at      = excluded.updated_at",
+            (username, kind, value_encrypted, _now()),
+        )
+
+
+def get_user_connector(username: str, kind: str) -> Optional[bytes]:
+    init_db()
+    with connect() as conn:
+        r = conn.execute(
+            "SELECT value_encrypted FROM user_connectors "
+            "WHERE username = ? AND kind = ?",
+            (username, kind),
+        ).fetchone()
+        return bytes(r["value_encrypted"]) if r else None
+
+
+def list_user_connectors(username: str) -> list[dict]:
+    """Returns [{kind, updated_at}, …] — never decrypted values."""
+    init_db()
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT kind, updated_at FROM user_connectors "
+            "WHERE username = ? ORDER BY kind",
+            (username,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def delete_user_connector(username: str, kind: str) -> bool:
+    init_db()
+    with connect() as conn:
+        cur = conn.execute(
+            "DELETE FROM user_connectors WHERE username = ? AND kind = ?",
+            (username, kind),
+        )
+        return cur.rowcount > 0
+
+
+# ---------------------------- user questions -------------------------------
+
+def insert_user_question(*, username: str, question: str, backend: str,
+                         actual_backend: Optional[str],
+                         planned_tools: list[str],
+                         dataset_name: Optional[str],
+                         max_unpinned: int = 50) -> int:
+    """Persist a workbench question and prune the user's unpinned history
+    down to `max_unpinned` rows.  Returns the new row id."""
+    import json as _j
+    init_db()
+    with connect() as conn:
+        cur = conn.execute(
+            "INSERT INTO user_questions("
+            "  username, question, backend, actual_backend, planned_tools,"
+            "  dataset_name, asked_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (username, question, backend, actual_backend,
+             _j.dumps(planned_tools or []), dataset_name, _now()),
+        )
+        new_id = int(cur.lastrowid)
+        # Prune oldest UNPINNED rows beyond max_unpinned for this user.
+        conn.execute(
+            "DELETE FROM user_questions "
+            "WHERE id IN ("
+            "  SELECT id FROM user_questions "
+            "  WHERE username = ? AND pinned = 0 "
+            "  ORDER BY asked_at DESC LIMIT -1 OFFSET ?"
+            ")",
+            (username, int(max_unpinned)),
+        )
+    return new_id
+
+
+def list_user_questions(username: str, *, limit: int = 50) -> list[dict]:
+    """Pinned first, then newest first. Returns dicts with parsed planned_tools."""
+    import json as _j
+    init_db()
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT id, question, backend, actual_backend, planned_tools, "
+            "       dataset_name, pinned, asked_at "
+            "FROM user_questions WHERE username = ? "
+            "ORDER BY pinned DESC, asked_at DESC LIMIT ?",
+            (username, int(limit)),
+        ).fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d["planned_tools"] = _j.loads(d["planned_tools"] or "[]")
+            except Exception:
+                d["planned_tools"] = []
+            d["pinned"] = bool(d["pinned"])
+            out.append(d)
+        return out
+
+
+def set_user_question_pinned(username: str, question_id: int,
+                              pinned: bool) -> bool:
+    """Toggle pinned. Returns True if a row was updated."""
+    init_db()
+    with connect() as conn:
+        cur = conn.execute(
+            "UPDATE user_questions SET pinned = ? "
+            "WHERE username = ? AND id = ?",
+            (1 if pinned else 0, username, int(question_id)),
+        )
+        return cur.rowcount > 0
+
+
+def clear_user_questions(username: str, *, keep_pinned: bool = True) -> int:
+    """Delete the user's history; pinned rows survive by default.
+    Returns the number of deleted rows."""
+    init_db()
+    with connect() as conn:
+        if keep_pinned:
+            cur = conn.execute(
+                "DELETE FROM user_questions WHERE username = ? AND pinned = 0",
+                (username,),
+            )
+        else:
+            cur = conn.execute(
+                "DELETE FROM user_questions WHERE username = ?",
+                (username,),
+            )
+        return cur.rowcount
+
+
+def delete_user_dataset(username: str, dataset_id: int) -> Optional[str]:
+    """Returns the deleted file basename so the caller can unlink it from
+    disk.  None if no row matched (so the caller can 404)."""
+    init_db()
+    with connect() as conn:
+        r = conn.execute(
+            "SELECT file FROM user_datasets WHERE username = ? AND id = ?",
+            (username, int(dataset_id)),
+        ).fetchone()
+        if not r:
+            return None
+        conn.execute(
+            "DELETE FROM user_datasets WHERE username = ? AND id = ?",
+            (username, int(dataset_id)),
+        )
+        return r["file"]
 
 
 # ---------------------------- anomalies ------------------------------------
