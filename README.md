@@ -82,35 +82,44 @@ The tool registry lives in `analyst/agent.py`. Each tool is a `ToolSpec` with na
 ```mermaid
 flowchart LR
     subgraph In["Input"]
-        U[User CSV upload]
-        B[Bundled retail dataset]
+        U["User CSV upload"]
+        B["Bundled retail dataset"]
     end
     subgraph Plan["Planner"]
-        H[Heuristic regex]
-        L[Gemini]
+        H["Heuristic regex"]
+        L["Gemini"]
     end
     subgraph Exec["Executor"]
-        T[10 tool registry]
+        T["10-tool registry"]
     end
     subgraph Out["Surfaces"]
-        WB[/workbench]
-        DSH[/dashboard]
-        HIST[/history]
+        WB["#47;workbench"]
+        DSH["#47;dashboard"]
+        HIST["#47;history"]
     end
     subgraph Store["Storage"]
-        DB[(SQLite WAL)]
-        UF[user_data/<br/>per-user uploads]
+        DB[("SQLite WAL")]
+        UF["user_data#47;<br/>per-user uploads"]
     end
     subgraph Eval["Eval harness"]
-        M[Main corpus<br/>55 cases]
-        HO[Holdout<br/>14 paraphrases]
+        M["Main corpus<br/>55 cases"]
+        HO["Holdout<br/>14 paraphrases"]
     end
 
-    U & B --> Plan --> T --> Out
-    H & L -.fallback.-> T
-    Out --> DB
+    U --> Plan
+    B --> Plan
+    Plan --> T
+    T --> WB
+    T --> DSH
+    T --> HIST
+    H -.fallback.-> T
+    L -.fallback.-> T
+    WB --> DB
+    DSH --> DB
+    HIST --> DB
     U --> UF
-    M & HO --> Plan
+    M --> Plan
+    HO --> Plan
 ```
 
 ---
