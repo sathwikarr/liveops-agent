@@ -48,10 +48,31 @@ SAMPLE_CSV = REPO_ROOT / "analyst" / "sample_data" / "retail_orders.csv"
 # Eval baselines: the main 55-case corpus + the 14-case holdout split that the
 # heuristic was NOT tuned on. We surface ALL THREE numbers in the UI — pinning
 # only the 100% main number was the credibility hole the audit flagged.
-EVAL_FIXTURES = REPO_ROOT / "tests" / "fixtures"
-EVAL_BASELINE              = EVAL_FIXTURES / "eval_baseline.json"
-EVAL_HOLDOUT_HEURISTIC     = EVAL_FIXTURES / "eval_holdout_baseline_heuristic.json"
-EVAL_HOLDOUT_LLM           = EVAL_FIXTURES / "eval_holdout_baseline_llm.json"
+#
+# We resolve each file by trying `data/baselines/` first (production-stable
+# path that survives Dockerfile `tests/` exclusions and any test-tree
+# reorganization) and fall back to `tests/fixtures/` for dev environments
+# where the harness writes its output.
+_BASELINE_DIRS = (
+    REPO_ROOT / "data" / "baselines",
+    REPO_ROOT / "tests" / "fixtures",
+)
+
+
+def _baseline_path(name: str) -> Path:
+    """Return the first existing path for a baseline file, or the canonical
+    `data/baselines/<name>` path if none exist (so callers' .exists() checks
+    return False meaningfully)."""
+    for d in _BASELINE_DIRS:
+        p = d / name
+        if p.exists():
+            return p
+    return _BASELINE_DIRS[0] / name
+
+
+EVAL_BASELINE          = _baseline_path("eval_baseline.json")
+EVAL_HOLDOUT_HEURISTIC = _baseline_path("eval_holdout_baseline_heuristic.json")
+EVAL_HOLDOUT_LLM       = _baseline_path("eval_holdout_baseline_llm.json")
 
 # Per-session uploaded datasets. Lives on local disk; on Render's free tier
 # this dies with the dyno (acceptable for a session-scoped feature).

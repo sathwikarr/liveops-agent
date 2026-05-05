@@ -45,9 +45,13 @@ architecture.png
 *.md
 !README.md
 
-# Tests aren't needed in the runtime image.
+# Tests aren't needed in the runtime image…
 tests/
 pytest.ini
+# …but keep the pinned eval-baseline JSONs — the running app reads these
+# at /evals and on the landing page (the dual-baseline ribbon).
+!tests/fixtures/
+!tests/fixtures/*.json
 
 # Tooling.
 docker-compose.override.yml

@@ -1,0 +1,1258 @@
+{
+  "backend": "heuristic",
+  "n_cases": 55,
+  "n_passed": 55,
+  "n_failed": 0,
+  "mean_tool_match": 0.9909,
+  "mean_args_match": 0.9818,
+  "mean_no_forbidden": 1.0,
+  "mean_success_match": 0.9909,
+  "mean_overall": 0.9909,
+  "pass_rate": 1.0,
+  "per_tool": {
+    "revenue_by_period": {
+      "n": 6.0,
+      "pass_rate": 1.0,
+      "mean_overall": 0.9583
+    },
+    "top_products": {
+      "n": 7.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "top_customers": {
+      "n": 6.0,
+      "pass_rate": 1.0,
+      "mean_overall": 0.9583
+    },
+    "segment_customers": {
+      "n": 6.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "product_quadrants": {
+      "n": 6.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "co_purchases": {
+      "n": 5.0,
+      "pass_rate": 1.0,
+      "mean_overall": 0.95
+    },
+    "price_elasticity": {
+      "n": 6.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "churn_risk": {
+      "n": 6.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "cohort_retention": {
+      "n": 5.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "describe_columns": {
+      "n": 6.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    }
+  },
+  "per_tag": {
+    "revenue": {
+      "n": 6.0,
+      "pass_rate": 1.0,
+      "mean_overall": 0.9583
+    },
+    "easy": {
+      "n": 11.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "paraphrase": {
+      "n": 14.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "args": {
+      "n": 8.0,
+      "pass_rate": 1.0,
+      "mean_overall": 0.9688
+    },
+    "vague": {
+      "n": 4.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "products": {
+      "n": 12.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "terse": {
+      "n": 11.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "customers": {
+      "n": 6.0,
+      "pass_rate": 1.0,
+      "mean_overall": 0.9583
+    },
+    "edge": {
+      "n": 1.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "segments": {
+      "n": 5.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "specific": {
+      "n": 3.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "quadrants": {
+      "n": 5.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "basket": {
+      "n": 5.0,
+      "pass_rate": 1.0,
+      "mean_overall": 0.95
+    },
+    "elasticity": {
+      "n": 5.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "indirect": {
+      "n": 1.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "retention": {
+      "n": 11.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "cohort": {
+      "n": 4.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "schema": {
+      "n": 5.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "multi-tool": {
+      "n": 4.0,
+      "pass_rate": 1.0,
+      "mean_overall": 0.9375
+    },
+    "adversarial": {
+      "n": 1.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    },
+    "off-topic": {
+      "n": 1.0,
+      "pass_rate": 1.0,
+      "mean_overall": 1.0
+    }
+  },
+  "cases": [
+    {
+      "case_id": "rev-001",
+      "question": "Show me weekly revenue trend.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "revenue_by_period"
+      ],
+      "planned_args": {
+        "revenue_by_period": {
+          "freq": "W"
+        }
+      },
+      "answer": "Here's what I found for: *Show me weekly revenue trend.*\n\n  \u00b7 revenue_by_period (74 rows): period=2024-12-01 00:00:00, revenue=3519.21, pct_change=nan; period=2024-12-08 00:00:00, revenue=1159.03, pct_change=-0.671; period=2024-12-15 00:00:00, revenue=481.7, pct_change=-0.584; period=2024-12-22 00:00:00, revenue=0.0, pct_change=-1.0; period=2024-12-29 00:00:00, revenue=2130.3, pct_change=inf; period=2025-01-05 00:00:00, revenue=452.79999999999995, pct_change=-0.787",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "rev-002",
+      "question": "What does revenue look like over time?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "revenue_by_period"
+      ],
+      "planned_args": {
+        "revenue_by_period": {
+          "freq": "W"
+        }
+      },
+      "answer": "Here's what I found for: *What does revenue look like over time?*\n\n  \u00b7 revenue_by_period (74 rows): period=2024-12-01 00:00:00, revenue=3519.21, pct_change=nan; period=2024-12-08 00:00:00, revenue=1159.03, pct_change=-0.671; period=2024-12-15 00:00:00, revenue=481.7, pct_change=-0.584; period=2024-12-22 00:00:00, revenue=0.0, pct_change=-1.0; period=2024-12-29 00:00:00, revenue=2130.3, pct_change=inf; period=2025-01-05 00:00:00, revenue=452.79999999999995, pct_change=-0.787",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "rev-003",
+      "question": "Plot daily revenue for the last quarter.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "revenue_by_period"
+      ],
+      "planned_args": {
+        "revenue_by_period": {
+          "freq": "D"
+        }
+      },
+      "answer": "Here's what I found for: *Plot daily revenue for the last quarter.*\n\n  \u00b7 revenue_by_period (516 rows): period=2024-11-26 00:00:00, revenue=1649.02, pct_change=nan; period=2024-11-27 00:00:00, revenue=0.0, pct_change=-1.0; period=2024-11-28 00:00:00, revenue=860.6300000000001, pct_change=inf; period=2024-11-29 00:00:00, revenue=1009.56, pct_change=0.173; period=2024-11-30 00:00:00, revenue=0.0, pct_change=-1.0; period=2024-12-01 00:00:00, revenue=0.0, pct_change=nan",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "rev-004",
+      "question": "Give me monthly sales by month.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "revenue_by_period"
+      ],
+      "planned_args": {
+        "revenue_by_period": {
+          "freq": "M"
+        }
+      },
+      "answer": "Here's what I found for: *Give me monthly sales by month.*\n\n  \u00b7 revenue_by_period (18 rows): period=2024-11-30 00:00:00, revenue=3519.21, pct_change=nan; period=2024-12-31 00:00:00, revenue=3771.03, pct_change=0.072; period=2025-01-31 00:00:00, revenue=4460.82, pct_change=0.183; period=2025-02-28 00:00:00, revenue=10022.33, pct_change=1.247; period=2025-03-31 00:00:00, revenue=28858.149999999998, pct_change=1.879; period=2025-04-30 00:00:00, revenue=31520.489999999998, pct_change=0.092",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "rev-005",
+      "question": "How are sales trending?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "revenue_by_period"
+      ],
+      "planned_args": {
+        "revenue_by_period": {
+          "freq": "W"
+        }
+      },
+      "answer": "Here's what I found for: *How are sales trending?*\n\n  \u00b7 revenue_by_period (74 rows): period=2024-12-01 00:00:00, revenue=3519.21, pct_change=nan; period=2024-12-08 00:00:00, revenue=1159.03, pct_change=-0.671; period=2024-12-15 00:00:00, revenue=481.7, pct_change=-0.584; period=2024-12-22 00:00:00, revenue=0.0, pct_change=-1.0; period=2024-12-29 00:00:00, revenue=2130.3, pct_change=inf; period=2025-01-05 00:00:00, revenue=452.79999999999995, pct_change=-0.787",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "topp-001",
+      "question": "What are the top 5 products by revenue?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "top_products",
+        "revenue_by_period"
+      ],
+      "planned_args": {
+        "top_products": {
+          "n": 5
+        },
+        "revenue_by_period": {
+          "freq": "W"
+        }
+      },
+      "answer": "Here's what I found for: *What are the top 5 products by revenue?*\n\n  \u00b7 top_products (5 rows): product=P1022, revenue=77942.27; product=P1017, revenue=76440.79; product=P1029, revenue=75670.42; product=P1012, revenue=72260.05; product=P1013, revenue=70466.16\n  \u00b7 revenue_by_period (74 rows): period=2024-12-01 00:00:00, revenue=3519.21, pct_change=nan; period=2024-12-08 00:00:00, revenue=1159.03, pct_change=-0.671; period=2024-12-15 00:00:00, revenue=481.7, pct_change=-0.584; period=2024-12-22 00:00:00, revenue=0.0, pct_change=-1.0; period=2024-12-29 00:00:00, revenue=2130.3, pct_change=inf; period=2025-01-05 00:00:00, revenue=452.79999999999995, pct_change=-0.787",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "topp-002",
+      "question": "Show me my best-selling SKUs.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "top_products"
+      ],
+      "planned_args": {
+        "top_products": {}
+      },
+      "answer": "Here's what I found for: *Show me my best-selling SKUs.*\n\n  \u00b7 top_products (10 rows): product=P1022, revenue=77942.27; product=P1017, revenue=76440.79; product=P1029, revenue=75670.42; product=P1012, revenue=72260.05; product=P1013, revenue=70466.16; product=P1020, revenue=70266.98",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "topp-003",
+      "question": "Which 20 products bring in the most money?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "top_products"
+      ],
+      "planned_args": {
+        "top_products": {
+          "n": 20
+        }
+      },
+      "answer": "Here's what I found for: *Which 20 products bring in the most money?*\n\n  \u00b7 top_products (20 rows): product=P1022, revenue=77942.27; product=P1017, revenue=76440.79; product=P1029, revenue=75670.42; product=P1012, revenue=72260.05; product=P1013, revenue=70466.16; product=P1020, revenue=70266.98",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "topp-004",
+      "question": "Top 3 products please.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "top_products"
+      ],
+      "planned_args": {
+        "top_products": {
+          "n": 3
+        }
+      },
+      "answer": "Here's what I found for: *Top 3 products please.*\n\n  \u00b7 top_products (3 rows): product=P1022, revenue=77942.27; product=P1017, revenue=76440.79; product=P1029, revenue=75670.42",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "topp-005",
+      "question": "Best product overall?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "top_products"
+      ],
+      "planned_args": {
+        "top_products": {}
+      },
+      "answer": "Here's what I found for: *Best product overall?*\n\n  \u00b7 top_products (10 rows): product=P1022, revenue=77942.27; product=P1017, revenue=76440.79; product=P1029, revenue=75670.42; product=P1012, revenue=72260.05; product=P1013, revenue=70466.16; product=P1020, revenue=70266.98",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "topc-001",
+      "question": "Show me my top 10 customers by revenue.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "top_customers",
+        "revenue_by_period"
+      ],
+      "planned_args": {
+        "top_customers": {
+          "n": 10
+        },
+        "revenue_by_period": {
+          "freq": "W"
+        }
+      },
+      "answer": "Here's what I found for: *Show me my top 10 customers by revenue.*\n\n  \u00b7 top_customers (10 rows): customer=C2159, revenue=26954.29; customer=C2196, revenue=25605.36; customer=C2057, revenue=25032.31; customer=C2108, revenue=25017.65; customer=C2118, revenue=24639.13; customer=C2182, revenue=24247.21\n  \u00b7 revenue_by_period (74 rows): period=2024-12-01 00:00:00, revenue=3519.21, pct_change=nan; period=2024-12-08 00:00:00, revenue=1159.03, pct_change=-0.671; period=2024-12-15 00:00:00, revenue=481.7, pct_change=-0.584; period=2024-12-22 00:00:00, revenue=0.0, pct_change=-1.0; period=2024-12-29 00:00:00, revenue=2130.3, pct_change=inf; period=2025-01-05 00:00:00, revenue=452.79999999999995, pct_change=-0.787",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "topc-002",
+      "question": "Who are my biggest spenders?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "top_customers"
+      ],
+      "planned_args": {
+        "top_customers": {}
+      },
+      "answer": "Here's what I found for: *Who are my biggest spenders?*\n\n  \u00b7 top_customers (10 rows): customer=C2159, revenue=26954.29; customer=C2196, revenue=25605.36; customer=C2057, revenue=25032.31; customer=C2108, revenue=25017.65; customer=C2118, revenue=24639.13; customer=C2182, revenue=24247.21",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "topc-003",
+      "question": "List the top 25 customers.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "top_customers"
+      ],
+      "planned_args": {
+        "top_customers": {
+          "n": 25
+        }
+      },
+      "answer": "Here's what I found for: *List the top 25 customers.*\n\n  \u00b7 top_customers (25 rows): customer=C2159, revenue=26954.29; customer=C2196, revenue=25605.36; customer=C2057, revenue=25032.31; customer=C2108, revenue=25017.65; customer=C2118, revenue=24639.13; customer=C2182, revenue=24247.21",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "topc-004",
+      "question": "Best customer this year?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "top_customers"
+      ],
+      "planned_args": {
+        "top_customers": {}
+      },
+      "answer": "Here's what I found for: *Best customer this year?*\n\n  \u00b7 top_customers (10 rows): customer=C2159, revenue=26954.29; customer=C2196, revenue=25605.36; customer=C2057, revenue=25032.31; customer=C2108, revenue=25017.65; customer=C2118, revenue=24639.13; customer=C2182, revenue=24247.21",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "topc-005",
+      "question": "Top 1 customer.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "top_customers"
+      ],
+      "planned_args": {
+        "top_customers": {
+          "n": 1
+        }
+      },
+      "answer": "Here's what I found for: *Top 1 customer.*\n\n  \u00b7 top_customers (1 rows): customer=C2159, revenue=26954.29",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "seg-001",
+      "question": "Segment my customers using RFM.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "segment_customers"
+      ],
+      "planned_args": {
+        "segment_customers": {}
+      },
+      "answer": "Here's what I found for: *Segment my customers using RFM.*\n\n  \u00b7 segment_customers: Lost: 47, Average: 45, Loyal: 41, Champions: 29, At-Risk: 25, New: 8",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "seg-002",
+      "question": "How many champions vs at-risk customers do I have?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "segment_customers"
+      ],
+      "planned_args": {
+        "segment_customers": {}
+      },
+      "answer": "Here's what I found for: *How many champions vs at-risk customers do I have?*\n\n  \u00b7 segment_customers: Lost: 47, Average: 45, Loyal: 41, Champions: 29, At-Risk: 25, New: 8",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "seg-003",
+      "question": "Break down customers into loyalty segments.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "segment_customers"
+      ],
+      "planned_args": {
+        "segment_customers": {}
+      },
+      "answer": "Here's what I found for: *Break down customers into loyalty segments.*\n\n  \u00b7 segment_customers: Lost: 47, Average: 45, Loyal: 41, Champions: 29, At-Risk: 25, New: 8",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "seg-004",
+      "question": "What's the size of my Loyal segment?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "segment_customers"
+      ],
+      "planned_args": {
+        "segment_customers": {}
+      },
+      "answer": "Here's what I found for: *What's the size of my Loyal segment?*\n\n  \u00b7 segment_customers: Lost: 47, Average: 45, Loyal: 41, Champions: 29, At-Risk: 25, New: 8",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "seg-005",
+      "question": "RFM analysis.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "segment_customers"
+      ],
+      "planned_args": {
+        "segment_customers": {}
+      },
+      "answer": "Here's what I found for: *RFM analysis.*\n\n  \u00b7 segment_customers: Lost: 47, Average: 45, Loyal: 41, Champions: 29, At-Risk: 25, New: 8",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "quad-001",
+      "question": "Show me the BCG quadrants for my products.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "product_quadrants"
+      ],
+      "planned_args": {
+        "product_quadrants": {}
+      },
+      "answer": "Here's what I found for: *Show me the BCG quadrants for my products.*\n\n  \u00b7 product_quadrants: Star: 15, Question Mark: 15",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "quad-002",
+      "question": "Which products are stars vs cash cows?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "product_quadrants"
+      ],
+      "planned_args": {
+        "product_quadrants": {}
+      },
+      "answer": "Here's what I found for: *Which products are stars vs cash cows?*\n\n  \u00b7 product_quadrants: Star: 15, Question Mark: 15",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "quad-003",
+      "question": "How many dog products do I have?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "product_quadrants"
+      ],
+      "planned_args": {
+        "product_quadrants": {}
+      },
+      "answer": "Here's what I found for: *How many dog products do I have?*\n\n  \u00b7 product_quadrants: Star: 15, Question Mark: 15",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "quad-004",
+      "question": "Star product list?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "product_quadrants"
+      ],
+      "planned_args": {
+        "product_quadrants": {}
+      },
+      "answer": "Here's what I found for: *Star product list?*\n\n  \u00b7 product_quadrants: Star: 15, Question Mark: 15",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "quad-005",
+      "question": "Question mark products?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "product_quadrants"
+      ],
+      "planned_args": {
+        "product_quadrants": {}
+      },
+      "answer": "Here's what I found for: *Question mark products?*\n\n  \u00b7 product_quadrants: Star: 15, Question Mark: 15",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "cop-001",
+      "question": "What products are frequently bought together?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "co_purchases"
+      ],
+      "planned_args": {
+        "co_purchases": {}
+      },
+      "answer": "Here's what I found for: *What products are frequently bought together?*\n\n  \u00b7 co_purchases (10 rows): item_a=P1011, item_b=P1025, support=0.0103; item_a=P1020, item_b=P1028, support=0.0103; item_a=P1016, item_b=P1027, support=0.0084; item_a=P1005, item_b=P1014, support=0.0122; item_a=P1010, item_b=P1011, support=0.0097; item_a=P1006, item_b=P1026, support=0.0103",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "cop-002",
+      "question": "Show me the top 15 co-purchase pairs.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "co_purchases"
+      ],
+      "planned_args": {
+        "co_purchases": {}
+      },
+      "answer": "Here's what I found for: *Show me the top 15 co-purchase pairs.*\n\n  \u00b7 co_purchases (10 rows): item_a=P1011, item_b=P1025, support=0.0103; item_a=P1020, item_b=P1028, support=0.0103; item_a=P1016, item_b=P1027, support=0.0084; item_a=P1005, item_b=P1014, support=0.0122; item_a=P1010, item_b=P1011, support=0.0097; item_a=P1006, item_b=P1026, support=0.0103",
+      "tool_match": 1.0,
+      "args_match": 0.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 0.75,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "cop-003",
+      "question": "Best cross-sell opportunities?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "co_purchases"
+      ],
+      "planned_args": {
+        "co_purchases": {}
+      },
+      "answer": "Here's what I found for: *Best cross-sell opportunities?*\n\n  \u00b7 co_purchases (10 rows): item_a=P1011, item_b=P1025, support=0.0103; item_a=P1020, item_b=P1028, support=0.0103; item_a=P1016, item_b=P1027, support=0.0084; item_a=P1005, item_b=P1014, support=0.0122; item_a=P1010, item_b=P1011, support=0.0097; item_a=P1006, item_b=P1026, support=0.0103",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "cop-004",
+      "question": "What should I bundle together?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "co_purchases"
+      ],
+      "planned_args": {
+        "co_purchases": {}
+      },
+      "answer": "Here's what I found for: *What should I bundle together?*\n\n  \u00b7 co_purchases (10 rows): item_a=P1011, item_b=P1025, support=0.0103; item_a=P1020, item_b=P1028, support=0.0103; item_a=P1016, item_b=P1027, support=0.0084; item_a=P1005, item_b=P1014, support=0.0122; item_a=P1010, item_b=P1011, support=0.0097; item_a=P1006, item_b=P1026, support=0.0103",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "cop-005",
+      "question": "Market basket analysis please.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "co_purchases"
+      ],
+      "planned_args": {
+        "co_purchases": {}
+      },
+      "answer": "Here's what I found for: *Market basket analysis please.*\n\n  \u00b7 co_purchases (10 rows): item_a=P1011, item_b=P1025, support=0.0103; item_a=P1020, item_b=P1028, support=0.0103; item_a=P1016, item_b=P1027, support=0.0084; item_a=P1005, item_b=P1014, support=0.0122; item_a=P1010, item_b=P1011, support=0.0097; item_a=P1006, item_b=P1026, support=0.0103",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "ela-001",
+      "question": "Compute price elasticity by product.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "price_elasticity"
+      ],
+      "planned_args": {
+        "price_elasticity": {}
+      },
+      "answer": "Here's what I found for: *Compute price elasticity by product.*\n\n  \u00b7 price_elasticity (20 rows): product=P1002, n=142, mean_price=28.54; product=P1018, n=140, mean_price=85.418; product=P1007, n=128, mean_price=89.873; product=P1020, n=123, mean_price=223.303; product=P1006, n=120, mean_price=111.485; product=P1003, n=130, mean_price=64.266",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "ela-002",
+      "question": "Which products are most price-sensitive?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "price_elasticity"
+      ],
+      "planned_args": {
+        "price_elasticity": {}
+      },
+      "answer": "Here's what I found for: *Which products are most price-sensitive?*\n\n  \u00b7 price_elasticity (20 rows): product=P1002, n=142, mean_price=28.54; product=P1018, n=140, mean_price=85.418; product=P1007, n=128, mean_price=89.873; product=P1020, n=123, mean_price=223.303; product=P1006, n=120, mean_price=111.485; product=P1003, n=130, mean_price=64.266",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "ela-003",
+      "question": "How much does demand drop when I raise the price?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "price_elasticity"
+      ],
+      "planned_args": {
+        "price_elasticity": {}
+      },
+      "answer": "Here's what I found for: *How much does demand drop when I raise the price?*\n\n  \u00b7 price_elasticity (20 rows): product=P1002, n=142, mean_price=28.54; product=P1018, n=140, mean_price=85.418; product=P1007, n=128, mean_price=89.873; product=P1020, n=123, mean_price=223.303; product=P1006, n=120, mean_price=111.485; product=P1003, n=130, mean_price=64.266",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "ela-004",
+      "question": "Elasticity scores by SKU.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "price_elasticity"
+      ],
+      "planned_args": {
+        "price_elasticity": {}
+      },
+      "answer": "Here's what I found for: *Elasticity scores by SKU.*\n\n  \u00b7 price_elasticity (20 rows): product=P1002, n=142, mean_price=28.54; product=P1018, n=140, mean_price=85.418; product=P1007, n=128, mean_price=89.873; product=P1020, n=123, mean_price=223.303; product=P1006, n=120, mean_price=111.485; product=P1003, n=130, mean_price=64.266",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "ela-005",
+      "question": "Where is pricing power weakest?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "price_elasticity"
+      ],
+      "planned_args": {
+        "price_elasticity": {}
+      },
+      "answer": "Here's what I found for: *Where is pricing power weakest?*\n\n  \u00b7 price_elasticity (20 rows): product=P1002, n=142, mean_price=28.54; product=P1018, n=140, mean_price=85.418; product=P1007, n=128, mean_price=89.873; product=P1020, n=123, mean_price=223.303; product=P1006, n=120, mean_price=111.485; product=P1003, n=130, mean_price=64.266",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "chu-001",
+      "question": "Which customers are most likely to churn?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "churn_risk"
+      ],
+      "planned_args": {
+        "churn_risk": {}
+      },
+      "answer": "Here's what I found for: *Which customers are most likely to churn?*\n\n  \u00b7 churn_risk: Active: 109, Churned: 70, Cooling: 12, At-Risk: 9",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "chu-002",
+      "question": "How many customers are inactive?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "churn_risk"
+      ],
+      "planned_args": {
+        "churn_risk": {}
+      },
+      "answer": "Here's what I found for: *How many customers are inactive?*\n\n  \u00b7 churn_risk: Active: 109, Churned: 70, Cooling: 12, At-Risk: 9",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "chu-003",
+      "question": "Show me customers at risk of leaving.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "churn_risk"
+      ],
+      "planned_args": {
+        "churn_risk": {}
+      },
+      "answer": "Here's what I found for: *Show me customers at risk of leaving.*\n\n  \u00b7 churn_risk: Active: 109, Churned: 70, Cooling: 12, At-Risk: 9",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "chu-004",
+      "question": "Distribution of retention risk?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "churn_risk"
+      ],
+      "planned_args": {
+        "churn_risk": {}
+      },
+      "answer": "Here's what I found for: *Distribution of retention risk?*\n\n  \u00b7 churn_risk: Active: 109, Churned: 70, Cooling: 12, At-Risk: 9",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "chu-005",
+      "question": "Churn analysis.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "churn_risk"
+      ],
+      "planned_args": {
+        "churn_risk": {}
+      },
+      "answer": "Here's what I found for: *Churn analysis.*\n\n  \u00b7 churn_risk: Active: 109, Churned: 70, Cooling: 12, At-Risk: 9",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "coh-001",
+      "question": "Show me monthly cohort retention.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "cohort_retention"
+      ],
+      "planned_args": {
+        "cohort_retention": {}
+      },
+      "answer": "Here's what I found for: *Show me monthly cohort retention.*\n\n  \u00b7 cohort_retention: 0: {'2024-11': 1.0, '2024-12': 1.0, '2025-01': 1.0, '2025-02': 1.0, '2025-03': 1.0, '2025-04': 1.0, '2025-05': 1.0, '2025-06': 1.0, '2025-07': 1.0, '2025-08': 1.0, '2025-09': 1.0, '2025-10': 1.0, '2025-11': 1.0, '2025-12': 1.0, '2026-01': 1.0, '2026-02': 1.0, '2026-03': 1.0, '2026-04': 1.0}, 1: {'2024-11': 0.333, '2024-12': 0.25, '2025-01': 0.333, '2025-02': 0.667, '2025-03': 0.529, '2025-04': 0.143, '2025-05': 0.154, '2025-06': 0.368, '2025-07': 0.688, '2025-08': 0.435, '2025-09': 0.357, '2025-10': 0.312, '2025-11': 0.391, '2025-12': 0.417, '2026-01': 0.286, '2026-02': 0.4, '2026-03': 0.111, '2026-04': 0.0}, 2: {'2024-11': 0.333, '2024-12': 0.25, '2025-01': 0.333, '2025-02': 0.333, '2025-03': 0.529, '2025-04': 0.286, '2025-05': 0.462, '2025-06': 0.526, '2025-07': 0.438, '2025-08': 0.522, '2025-09': 0.429, '2025-10': 0.25, '2025-11': 0.478, '2025-12': 0.5, '2026-01': 0.286, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 3: {'2024-11': 0.333, '2024-12': 1.0, '2025-01': 0.667, '2025-02': 0.333, '2025-03': 0.529, '2025-04': 0.286, '2025-05': 0.462, '2025-06': 0.368, '2025-07': 0.562, '2025-08': 0.435, '2025-09': 0.5, '2025-10': 0.312, '2025-11': 0.435, '2025-12': 0.333, '2026-01': 0.429, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 4: {'2024-11': 0.667, '2024-12': 0.5, '2025-01': 0.333, '2025-02': 0.333, '2025-03': 0.353, '2025-04': 0.429, '2025-05': 0.231, '2025-06': 0.316, '2025-07': 0.562, '2025-08': 0.435, '2025-09': 0.429, '2025-10': 0.312, '2025-11': 0.435, '2025-12': 0.333, '2026-01': 0.0, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 5: {'2024-11': 0.333, '2024-12': 0.75, '2025-01': 0.333, '2025-02': 0.667, '2025-03': 0.353, '2025-04': 0.286, '2025-05': 0.385, '2025-06': 0.368, '2025-07': 0.562, '2025-08': 0.391, '2025-09': 0.5, '2025-10': 0.375, '2025-11': 0.391, '2025-12': 0.0, '2026-01': 0.0, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "coh-002",
+      "question": "How does retention decay by signup month?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "cohort_retention"
+      ],
+      "planned_args": {
+        "cohort_retention": {}
+      },
+      "answer": "Here's what I found for: *How does retention decay by signup month?*\n\n  \u00b7 cohort_retention: 0: {'2024-11': 1.0, '2024-12': 1.0, '2025-01': 1.0, '2025-02': 1.0, '2025-03': 1.0, '2025-04': 1.0, '2025-05': 1.0, '2025-06': 1.0, '2025-07': 1.0, '2025-08': 1.0, '2025-09': 1.0, '2025-10': 1.0, '2025-11': 1.0, '2025-12': 1.0, '2026-01': 1.0, '2026-02': 1.0, '2026-03': 1.0, '2026-04': 1.0}, 1: {'2024-11': 0.333, '2024-12': 0.25, '2025-01': 0.333, '2025-02': 0.667, '2025-03': 0.529, '2025-04': 0.143, '2025-05': 0.154, '2025-06': 0.368, '2025-07': 0.688, '2025-08': 0.435, '2025-09': 0.357, '2025-10': 0.312, '2025-11': 0.391, '2025-12': 0.417, '2026-01': 0.286, '2026-02': 0.4, '2026-03': 0.111, '2026-04': 0.0}, 2: {'2024-11': 0.333, '2024-12': 0.25, '2025-01': 0.333, '2025-02': 0.333, '2025-03': 0.529, '2025-04': 0.286, '2025-05': 0.462, '2025-06': 0.526, '2025-07': 0.438, '2025-08': 0.522, '2025-09': 0.429, '2025-10': 0.25, '2025-11': 0.478, '2025-12': 0.5, '2026-01': 0.286, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 3: {'2024-11': 0.333, '2024-12': 1.0, '2025-01': 0.667, '2025-02': 0.333, '2025-03': 0.529, '2025-04': 0.286, '2025-05': 0.462, '2025-06': 0.368, '2025-07': 0.562, '2025-08': 0.435, '2025-09': 0.5, '2025-10': 0.312, '2025-11': 0.435, '2025-12': 0.333, '2026-01': 0.429, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 4: {'2024-11': 0.667, '2024-12': 0.5, '2025-01': 0.333, '2025-02': 0.333, '2025-03': 0.353, '2025-04': 0.429, '2025-05': 0.231, '2025-06': 0.316, '2025-07': 0.562, '2025-08': 0.435, '2025-09': 0.429, '2025-10': 0.312, '2025-11': 0.435, '2025-12': 0.333, '2026-01': 0.0, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 5: {'2024-11': 0.333, '2024-12': 0.75, '2025-01': 0.333, '2025-02': 0.667, '2025-03': 0.353, '2025-04': 0.286, '2025-05': 0.385, '2025-06': 0.368, '2025-07': 0.562, '2025-08': 0.391, '2025-09': 0.5, '2025-10': 0.375, '2025-11': 0.391, '2025-12': 0.0, '2026-01': 0.0, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "coh-003",
+      "question": "Cohort retention matrix?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "cohort_retention"
+      ],
+      "planned_args": {
+        "cohort_retention": {}
+      },
+      "answer": "Here's what I found for: *Cohort retention matrix?*\n\n  \u00b7 cohort_retention: 0: {'2024-11': 1.0, '2024-12': 1.0, '2025-01': 1.0, '2025-02': 1.0, '2025-03': 1.0, '2025-04': 1.0, '2025-05': 1.0, '2025-06': 1.0, '2025-07': 1.0, '2025-08': 1.0, '2025-09': 1.0, '2025-10': 1.0, '2025-11': 1.0, '2025-12': 1.0, '2026-01': 1.0, '2026-02': 1.0, '2026-03': 1.0, '2026-04': 1.0}, 1: {'2024-11': 0.333, '2024-12': 0.25, '2025-01': 0.333, '2025-02': 0.667, '2025-03': 0.529, '2025-04': 0.143, '2025-05': 0.154, '2025-06': 0.368, '2025-07': 0.688, '2025-08': 0.435, '2025-09': 0.357, '2025-10': 0.312, '2025-11': 0.391, '2025-12': 0.417, '2026-01': 0.286, '2026-02': 0.4, '2026-03': 0.111, '2026-04': 0.0}, 2: {'2024-11': 0.333, '2024-12': 0.25, '2025-01': 0.333, '2025-02': 0.333, '2025-03': 0.529, '2025-04': 0.286, '2025-05': 0.462, '2025-06': 0.526, '2025-07': 0.438, '2025-08': 0.522, '2025-09': 0.429, '2025-10': 0.25, '2025-11': 0.478, '2025-12': 0.5, '2026-01': 0.286, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 3: {'2024-11': 0.333, '2024-12': 1.0, '2025-01': 0.667, '2025-02': 0.333, '2025-03': 0.529, '2025-04': 0.286, '2025-05': 0.462, '2025-06': 0.368, '2025-07': 0.562, '2025-08': 0.435, '2025-09': 0.5, '2025-10': 0.312, '2025-11': 0.435, '2025-12': 0.333, '2026-01': 0.429, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 4: {'2024-11': 0.667, '2024-12': 0.5, '2025-01': 0.333, '2025-02': 0.333, '2025-03': 0.353, '2025-04': 0.429, '2025-05': 0.231, '2025-06': 0.316, '2025-07': 0.562, '2025-08': 0.435, '2025-09': 0.429, '2025-10': 0.312, '2025-11': 0.435, '2025-12': 0.333, '2026-01': 0.0, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 5: {'2024-11': 0.333, '2024-12': 0.75, '2025-01': 0.333, '2025-02': 0.667, '2025-03': 0.353, '2025-04': 0.286, '2025-05': 0.385, '2025-06': 0.368, '2025-07': 0.562, '2025-08': 0.391, '2025-09': 0.5, '2025-10': 0.375, '2025-11': 0.391, '2025-12': 0.0, '2026-01': 0.0, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "coh-004",
+      "question": "Build me a retention curve by cohort.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "cohort_retention"
+      ],
+      "planned_args": {
+        "cohort_retention": {}
+      },
+      "answer": "Here's what I found for: *Build me a retention curve by cohort.*\n\n  \u00b7 cohort_retention: 0: {'2024-11': 1.0, '2024-12': 1.0, '2025-01': 1.0, '2025-02': 1.0, '2025-03': 1.0, '2025-04': 1.0, '2025-05': 1.0, '2025-06': 1.0, '2025-07': 1.0, '2025-08': 1.0, '2025-09': 1.0, '2025-10': 1.0, '2025-11': 1.0, '2025-12': 1.0, '2026-01': 1.0, '2026-02': 1.0, '2026-03': 1.0, '2026-04': 1.0}, 1: {'2024-11': 0.333, '2024-12': 0.25, '2025-01': 0.333, '2025-02': 0.667, '2025-03': 0.529, '2025-04': 0.143, '2025-05': 0.154, '2025-06': 0.368, '2025-07': 0.688, '2025-08': 0.435, '2025-09': 0.357, '2025-10': 0.312, '2025-11': 0.391, '2025-12': 0.417, '2026-01': 0.286, '2026-02': 0.4, '2026-03': 0.111, '2026-04': 0.0}, 2: {'2024-11': 0.333, '2024-12': 0.25, '2025-01': 0.333, '2025-02': 0.333, '2025-03': 0.529, '2025-04': 0.286, '2025-05': 0.462, '2025-06': 0.526, '2025-07': 0.438, '2025-08': 0.522, '2025-09': 0.429, '2025-10': 0.25, '2025-11': 0.478, '2025-12': 0.5, '2026-01': 0.286, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 3: {'2024-11': 0.333, '2024-12': 1.0, '2025-01': 0.667, '2025-02': 0.333, '2025-03': 0.529, '2025-04': 0.286, '2025-05': 0.462, '2025-06': 0.368, '2025-07': 0.562, '2025-08': 0.435, '2025-09': 0.5, '2025-10': 0.312, '2025-11': 0.435, '2025-12': 0.333, '2026-01': 0.429, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 4: {'2024-11': 0.667, '2024-12': 0.5, '2025-01': 0.333, '2025-02': 0.333, '2025-03': 0.353, '2025-04': 0.429, '2025-05': 0.231, '2025-06': 0.316, '2025-07': 0.562, '2025-08': 0.435, '2025-09': 0.429, '2025-10': 0.312, '2025-11': 0.435, '2025-12': 0.333, '2026-01': 0.0, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 5: {'2024-11': 0.333, '2024-12': 0.75, '2025-01': 0.333, '2025-02': 0.667, '2025-03': 0.353, '2025-04': 0.286, '2025-05': 0.385, '2025-06': 0.368, '2025-07': 0.562, '2025-08': 0.391, '2025-09': 0.5, '2025-10': 0.375, '2025-11': 0.391, '2025-12': 0.0, '2026-01': 0.0, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "coh-005",
+      "question": "Monthly retention.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "cohort_retention"
+      ],
+      "planned_args": {
+        "cohort_retention": {}
+      },
+      "answer": "Here's what I found for: *Monthly retention.*\n\n  \u00b7 cohort_retention: 0: {'2024-11': 1.0, '2024-12': 1.0, '2025-01': 1.0, '2025-02': 1.0, '2025-03': 1.0, '2025-04': 1.0, '2025-05': 1.0, '2025-06': 1.0, '2025-07': 1.0, '2025-08': 1.0, '2025-09': 1.0, '2025-10': 1.0, '2025-11': 1.0, '2025-12': 1.0, '2026-01': 1.0, '2026-02': 1.0, '2026-03': 1.0, '2026-04': 1.0}, 1: {'2024-11': 0.333, '2024-12': 0.25, '2025-01': 0.333, '2025-02': 0.667, '2025-03': 0.529, '2025-04': 0.143, '2025-05': 0.154, '2025-06': 0.368, '2025-07': 0.688, '2025-08': 0.435, '2025-09': 0.357, '2025-10': 0.312, '2025-11': 0.391, '2025-12': 0.417, '2026-01': 0.286, '2026-02': 0.4, '2026-03': 0.111, '2026-04': 0.0}, 2: {'2024-11': 0.333, '2024-12': 0.25, '2025-01': 0.333, '2025-02': 0.333, '2025-03': 0.529, '2025-04': 0.286, '2025-05': 0.462, '2025-06': 0.526, '2025-07': 0.438, '2025-08': 0.522, '2025-09': 0.429, '2025-10': 0.25, '2025-11': 0.478, '2025-12': 0.5, '2026-01': 0.286, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 3: {'2024-11': 0.333, '2024-12': 1.0, '2025-01': 0.667, '2025-02': 0.333, '2025-03': 0.529, '2025-04': 0.286, '2025-05': 0.462, '2025-06': 0.368, '2025-07': 0.562, '2025-08': 0.435, '2025-09': 0.5, '2025-10': 0.312, '2025-11': 0.435, '2025-12': 0.333, '2026-01': 0.429, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 4: {'2024-11': 0.667, '2024-12': 0.5, '2025-01': 0.333, '2025-02': 0.333, '2025-03': 0.353, '2025-04': 0.429, '2025-05': 0.231, '2025-06': 0.316, '2025-07': 0.562, '2025-08': 0.435, '2025-09': 0.429, '2025-10': 0.312, '2025-11': 0.435, '2025-12': 0.333, '2026-01': 0.0, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}, 5: {'2024-11': 0.333, '2024-12': 0.75, '2025-01': 0.333, '2025-02': 0.667, '2025-03': 0.353, '2025-04': 0.286, '2025-05': 0.385, '2025-06': 0.368, '2025-07': 0.562, '2025-08': 0.391, '2025-09': 0.5, '2025-10': 0.375, '2025-11': 0.391, '2025-12': 0.0, '2026-01': 0.0, '2026-02': 0.0, '2026-03': 0.0, '2026-04': 0.0}",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "dsc-001",
+      "question": "What columns are in my dataset?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *What columns are in my dataset?*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "dsc-002",
+      "question": "Show me the schema.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *Show me the schema.*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "dsc-003",
+      "question": "What's in the data?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *What's in the data?*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "dsc-004",
+      "question": "List dataset columns.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *List dataset columns.*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "dsc-005",
+      "question": "Describe the columns I have.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *Describe the columns I have.*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "mix-001",
+      "question": "Which customers are churning, and what segments are they in?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "churn_risk",
+        "segment_customers"
+      ],
+      "planned_args": {
+        "churn_risk": {},
+        "segment_customers": {}
+      },
+      "answer": "Here's what I found for: *Which customers are churning, and what segments are they in?*\n\n  \u00b7 churn_risk: Active: 109, Churned: 70, Cooling: 12, At-Risk: 9\n  \u00b7 segment_customers: Lost: 47, Average: 45, Loyal: 41, Champions: 29, At-Risk: 25, New: 8",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "mix-002",
+      "question": "Show me the top products and their BCG quadrants.",
+      "backend": "heuristic",
+      "planned_tools": [
+        "product_quadrants",
+        "top_products"
+      ],
+      "planned_args": {
+        "product_quadrants": {},
+        "top_products": {}
+      },
+      "answer": "Here's what I found for: *Show me the top products and their BCG quadrants.*\n\n  \u00b7 product_quadrants: Star: 15, Question Mark: 15\n  \u00b7 top_products (10 rows): product=P1022, revenue=77942.27; product=P1017, revenue=76440.79; product=P1029, revenue=75670.42; product=P1012, revenue=72260.05; product=P1013, revenue=70466.16; product=P1020, revenue=70266.98",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "mix-003",
+      "question": "Hello, who are you?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "describe_columns"
+      ],
+      "planned_args": {
+        "describe_columns": {}
+      },
+      "answer": "Here's what I found for: *Hello, who are you?*\n\n  \u00b7 describe_columns: order_id: {'dtype': 'int64', 'null_pct': 0.0, 'mean': 10769.329035585353, 'min': 10000.0, 'max': 11553.0}, order_date: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 408}, customer_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 200}, product_id: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, product_name: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 30}, category: {'dtype': 'object', 'null_pct': 0.0, 'nunique': 5}",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "mix-004",
+      "question": "What revenue did I do last week and which customers spent the most?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "revenue_by_period"
+      ],
+      "planned_args": {
+        "revenue_by_period": {
+          "freq": "W"
+        }
+      },
+      "answer": "Here's what I found for: *What revenue did I do last week and which customers spent the most?*\n\n  \u00b7 revenue_by_period (74 rows): period=2024-12-01 00:00:00, revenue=3519.21, pct_change=nan; period=2024-12-08 00:00:00, revenue=1159.03, pct_change=-0.671; period=2024-12-15 00:00:00, revenue=481.7, pct_change=-0.584; period=2024-12-22 00:00:00, revenue=0.0, pct_change=-1.0; period=2024-12-29 00:00:00, revenue=2130.3, pct_change=inf; period=2025-01-05 00:00:00, revenue=452.79999999999995, pct_change=-0.787",
+      "tool_match": 0.5,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 0.5,
+      "overall": 0.75,
+      "passed": true,
+      "failed_reasons": []
+    },
+    {
+      "case_id": "mix-005",
+      "question": "Top 5 products and their elasticity?",
+      "backend": "heuristic",
+      "planned_tools": [
+        "price_elasticity",
+        "top_products"
+      ],
+      "planned_args": {
+        "price_elasticity": {},
+        "top_products": {
+          "n": 5
+        }
+      },
+      "answer": "Here's what I found for: *Top 5 products and their elasticity?*\n\n  \u00b7 price_elasticity (20 rows): product=P1002, n=142, mean_price=28.54; product=P1018, n=140, mean_price=85.418; product=P1007, n=128, mean_price=89.873; product=P1020, n=123, mean_price=223.303; product=P1006, n=120, mean_price=111.485; product=P1003, n=130, mean_price=64.266\n  \u00b7 top_products (5 rows): product=P1022, revenue=77942.27; product=P1017, revenue=76440.79; product=P1029, revenue=75670.42; product=P1012, revenue=72260.05; product=P1013, revenue=70466.16",
+      "tool_match": 1.0,
+      "args_match": 1.0,
+      "no_forbidden": 1.0,
+      "success_match": 1.0,
+      "overall": 1.0,
+      "passed": true,
+      "failed_reasons": []
+    }
+  ]
+}
