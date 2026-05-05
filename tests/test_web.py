@@ -480,6 +480,249 @@ def test_api_agent_ask_returns_obs_meta(client):
     assert meta["n_errors"] == 0
 
 
+def test_dashboard_fresh_user_shows_onboarding(tmp_path, monkeypatch):
+    """A user who just signed up sees the 3-step onboarding checklist and
+    'no saved datasets / no questions yet' empty states."""
+    db_path = tmp_path / "liveops_test.db"
+    monkeypatch.setenv("LIVEOPS_DB", str(db_path))
+    monkeypatch.setenv("LIVEOPS_UPLOAD_DIR", str(tmp_path / "uploads"))
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    import importlib, agent.db as _db; importlib.reload(_db); _db.init_db()
+    from web.server import create_app
+    from fastapi.testclient import TestClient
+
+    app = create_app()
+    with TestClient(app) as c:
+        c.post("/signup", data={"username": "alice", "password": "secret123",
+                                "confirm": "secret123", "next": "/"})
+        html = c.get("/dashboard").text
+        # Onboarding checklist (each string is unique to the fresh-user path)
+        for needle in ("Welcome,",
+                        "Upload a dataset",
+                        "Ask the agent",
+                        "Wire a notification channel"):
+            assert needle in html, f"missing onboarding: {needle!r}"
+        # The "Let's get..." copy uses an apostrophe; check on lower bound
+        assert "get you set up" in html
+        # Empty states
+        assert "No saved datasets yet" in html
+        assert "No questions yet" in html
+        # Connector cards both present, both showing 'Set up' (not configured)
+        assert "Slack webhook" in html and "Email (SMTP)" in html
+        assert html.count("Set up") >= 2
+        assert "configured" not in html  # neither card is configured yet
+
+
+def test_history_page_lists_uploads_and_questions(tmp_path, monkeypatch):
+    """User asks 3 questions, navigates to /history, sees uploads + questions
+    chronologically, can fetch a stored result for any past question."""
+    db_path = tmp_path / "liveops_test.db"
+    monkeypatch.setenv("LIVEOPS_DB", str(db_path))
+    monkeypatch.setenv("LIVEOPS_UPLOAD_DIR", str(tmp_path / "uploads"))
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    import importlib, agent.db as _db; importlib.reload(_db); _db.init_db()
+    from web.server import create_app
+    from fastapi.testclient import TestClient
+
+    app = create_app()
+    with TestClient(app) as c:
+        c.post("/signup", data={"username": "alice", "password": "secret123",
+                                "confirm": "secret123", "next": "/"})
+        upload = (b"order_id,customer_id,product_id,order_date,amount\n"
+                  b"O1,C1,P1,2025-12-01,42.50\n"
+                  b"O2,C2,P2,2025-12-02,17.00\n")
+        c.post("/api/workbench/upload",
+               files={"file": ("orders.csv", upload, "text/csv")})
+        for q in ("top 5 products", "weekly revenue trend"):
+            c.post("/api/agent/ask",
+                   json={"question": q, "backend": "heuristic"})
+
+        # Page renders both sections + filenames + questions
+        html = c.get("/history").text
+        for needle in ("past runs", "Uploads", "orders.csv",
+                        "Question runs", "top 5 products", "weekly revenue trend"):
+            assert needle in html, f"missing: {needle}"
+
+        # Detail endpoint returns the stored result
+        hist = c.get("/api/agent/history").json()["history"]
+        assert len(hist) >= 1
+        qid = hist[0]["id"]
+        detail = c.get(f"/api/agent/history/{qid}").json()
+        assert "question" in detail and detail["question"]["id"] == qid
+        # Stored result should be reconstructable
+        assert detail["result"] is not None
+        assert "answer" in detail["result"]
+        assert "plan" in detail["result"]
+
+        # Anon: 401 for the detail endpoint, 303 for the page
+        c.post("/logout")
+        assert c.get(f"/api/agent/history/{qid}").status_code == 401
+        r = c.get("/history", follow_redirects=False)
+        assert r.status_code == 303 and "/login" in r.headers["location"]
+
+
+def test_login_rate_limited_after_5_attempts(client):
+    """6th login from the same IP within 60s must show 'too many attempts'."""
+    for i in range(5):
+        r = client.post("/login",
+                        data={"username": "ghost", "password": "wrongpass1",
+                              "next": "/"},
+                        follow_redirects=False)
+        assert r.status_code == 303
+    # 6th attempt: rate-limiter trips, the next /login GET shows the flash.
+    client.post("/login", data={"username": "ghost", "password": "wrongpass1",
+                                  "next": "/"}, follow_redirects=False)
+    page = client.get("/login").text
+    assert "Too many login attempts" in page
+    assert "Try again in" in page
+
+
+def test_signup_rate_limited_after_5_attempts(client):
+    """Same protection for /signup so bot sign-up sprays are throttled."""
+    for i in range(5):
+        client.post("/signup",
+                    data={"username": f"u{i}", "password": "validpass1",
+                          "confirm": "validpass1", "next": "/"},
+                    follow_redirects=False)
+    # 6th attempt — over the limit, regardless of whether it would succeed.
+    client.post("/signup",
+                data={"username": "u6", "password": "validpass1",
+                      "confirm": "validpass1", "next": "/"},
+                follow_redirects=False)
+    page = client.get("/signup").text
+    assert "Too many signup attempts" in page
+
+
+def test_login_page_has_forgot_password_link(client):
+    r = client.get("/login")
+    assert r.status_code == 200
+    assert "Forgot password" in r.text
+
+
+def test_workbench_renders_export_buttons(client):
+    """Workbench page must include the Copy-as-Markdown and Copy-JSON
+    buttons so users can save the trace into a ticket/doc."""
+    r = client.get("/workbench")
+    assert r.status_code == 200
+    for needle in ("Copy as Markdown",
+                   "Copy JSON",
+                   "_asMarkdown",
+                   "copiedKind",
+                   "execCommand"):                # clipboard fallback
+        assert needle in r.text, f"missing: {needle}"
+
+
+def test_eval_timeline_persists_full_runs_only(tmp_path, monkeypatch):
+    """Full-corpus eval runs land in eval_runs; tag-filtered runs do not.
+    The /api/evals/timeline endpoint returns them newest-last for charting."""
+    db_path = tmp_path / "liveops_test.db"
+    monkeypatch.setenv("LIVEOPS_DB", str(db_path))
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    import importlib, agent.db as _db; importlib.reload(_db); _db.init_db()
+    from web.server import create_app
+    from fastapi.testclient import TestClient
+
+    app = create_app()
+    with TestClient(app) as c:
+        # Empty initially
+        assert c.get("/api/evals/timeline").json() == {"runs": []}
+
+        # Tag-filtered run -> NOT persisted (would distort the trend line)
+        c.post("/api/evals/run", json={"backend": "heuristic", "tags": ["easy"]})
+        assert c.get("/api/evals/timeline").json()["runs"] == []
+
+        # Full-corpus run -> persisted
+        c.post("/api/evals/run", json={"backend": "heuristic"})
+        c.post("/api/evals/run", json={"backend": "heuristic"})
+        runs = c.get("/api/evals/timeline").json()["runs"]
+        assert len(runs) == 2
+        for r in runs:
+            assert r["backend"] == "heuristic"
+            assert r["n_cases"] > 0
+            assert 0.0 <= r["pass_rate"] <= 1.0
+            assert "ts" in r
+
+        # Backend filter
+        assert c.get("/api/evals/timeline?backend=llm").json()["runs"] == []
+        h_runs = c.get("/api/evals/timeline?backend=heuristic").json()["runs"]
+        assert len(h_runs) == 2
+
+        # Eval page renders the timeline scaffolding
+        html = c.get("/evals").text
+        assert "evals-timeline" in html
+        assert "Pass-rate over time" in html
+
+
+def test_run_agent_page_explains_pipeline(tmp_path, monkeypatch):
+    """The /run-agent page must show the 5-stage pipeline, the active
+    dataset, and connector status so the user knows what 'Run now' will do."""
+    db_path = tmp_path / "liveops_test.db"
+    monkeypatch.setenv("LIVEOPS_DB", str(db_path))
+    monkeypatch.setenv("LIVEOPS_UPLOAD_DIR", str(tmp_path / "uploads"))
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    import importlib, agent.db as _db; importlib.reload(_db); _db.init_db()
+    from web.server import create_app
+    from fastapi.testclient import TestClient
+
+    app = create_app()
+    with TestClient(app) as c:
+        c.post("/signup", data={"username": "alice", "password": "secret123",
+                                "confirm": "secret123", "next": "/"})
+        html = c.get("/run-agent").text
+        # 5 pipeline stages
+        for stage in ("Ingest", "Score", "Plan", "Recommend", "Notify"):
+            assert stage in html, f"missing pipeline stage: {stage}"
+        # Active dataset chip
+        assert "Active dataset" in html
+        # No connectors configured: shows 'Set up' and dry-run helper text
+        assert "Set up" in html
+        assert "dry-run" in html
+
+        # Configure Slack -> page reflects it
+        c.post("/api/connectors/save",
+               json={"kind": "slack_webhook",
+                     "value": "https://hooks.slack.com/services/T/B/x"})
+        html = c.get("/run-agent").text
+        assert "configured" in html
+        assert "saved webhook" in html
+
+
+def test_dashboard_returning_user_shows_their_data(tmp_path, monkeypatch):
+    """A user with an upload + a question + a configured Slack webhook sees
+    their actual data, not the onboarding checklist."""
+    db_path = tmp_path / "liveops_test.db"
+    monkeypatch.setenv("LIVEOPS_DB", str(db_path))
+    monkeypatch.setenv("LIVEOPS_UPLOAD_DIR", str(tmp_path / "uploads"))
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    import importlib, agent.db as _db; importlib.reload(_db); _db.init_db()
+    from web.server import create_app
+    from fastapi.testclient import TestClient
+
+    app = create_app()
+    with TestClient(app) as c:
+        c.post("/signup", data={"username": "alice", "password": "secret123",
+                                "confirm": "secret123", "next": "/"})
+        upload_body = (b"order_id,customer_id,product_id,order_date,amount\n"
+                        b"O1,C1,P1,2025-12-01,42.50\n"
+                        b"O2,C2,P2,2025-12-02,17.00\n")
+        c.post("/api/workbench/upload",
+               files={"file": ("orders.csv", upload_body, "text/csv")})
+        c.post("/api/agent/ask",
+               json={"question": "weekly revenue trend", "backend": "heuristic"})
+        c.post("/api/connectors/save",
+               json={"kind": "slack_webhook",
+                     "value": "https://hooks.slack.com/services/T/B/x"})
+
+        html = c.get("/dashboard").text
+        # Personal data visible
+        assert "orders.csv" in html
+        assert "weekly revenue trend" in html
+        # Slack now shown as configured
+        assert "configured" in html
+        # Onboarding suppressed once user has data
+        assert "get you set up" not in html
+
+
 def test_minimal_two_column_csv_produces_actionable_hints(client, tmp_path, monkeypatch):
     """User uploads timestamp+revenue only.  7 of 10 tools should error,
     but EVERY error must be wrapped in an actionable hint that names the

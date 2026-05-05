@@ -95,8 +95,12 @@ CREATE TABLE IF NOT EXISTS user_questions (
     planned_tools  TEXT,          -- JSON array
     dataset_name   TEXT,          -- which dataset was active when asked
     pinned         INTEGER NOT NULL DEFAULT 0,
-    asked_at       TEXT NOT NULL
+    asked_at       TEXT NOT NULL,
+    result_json    TEXT           -- full answer/plan/obs payload (cap 50KB)
 );
+
+-- Backfill the new column on existing DBs (SQLite ignores duplicate ADD).
+CREATE TABLE IF NOT EXISTS _user_questions_migrate_marker (x INTEGER);
 CREATE INDEX IF NOT EXISTS ix_user_questions_user_ts
     ON user_questions(username, pinned DESC, asked_at DESC);
 
@@ -109,6 +113,22 @@ CREATE TABLE IF NOT EXISTS user_connectors (
     updated_at      TEXT NOT NULL,
     PRIMARY KEY (username, kind)
 );
+
+-- Pass-rate history for the /evals timeline chart. One row per /api/evals/run
+-- invocation. Anonymous users still produce rows (with username NULL) so the
+-- public-facing chart has signal without requiring login.
+CREATE TABLE IF NOT EXISTS eval_runs (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts            TEXT NOT NULL,
+    username      TEXT,                  -- null for anonymous
+    backend       TEXT NOT NULL,
+    n_cases       INTEGER NOT NULL,
+    n_passed      INTEGER NOT NULL,
+    pass_rate     REAL NOT NULL,
+    mean_overall  REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_eval_runs_ts ON eval_runs(ts DESC);
+CREATE INDEX IF NOT EXISTS ix_eval_runs_backend_ts ON eval_runs(backend, ts DESC);
 """
 
 
@@ -134,6 +154,13 @@ def init_db() -> None:
     """Create tables if missing. Safe to call repeatedly."""
     with connect() as conn:
         conn.executescript(SCHEMA)
+        # Forward-compatible migration: add `result_json` to user_questions
+        # if an older database is missing it.  SQLite's ALTER is idempotent
+        # only via this catch.
+        try:
+            conn.execute("ALTER TABLE user_questions ADD COLUMN result_json TEXT")
+        except sqlite3.OperationalError:
+            pass  # column already exists
 
 
 # ---------------------------- users ----------------------------------------
@@ -205,6 +232,43 @@ def get_user_dataset(username: str, dataset_id: int) -> Optional[dict]:
         return dict(r) if r else None
 
 
+# ---------------------------- eval runs ------------------------------------
+
+def insert_eval_run(*, username: Optional[str], backend: str,
+                    n_cases: int, n_passed: int,
+                    pass_rate: float, mean_overall: float) -> int:
+    init_db()
+    with connect() as conn:
+        cur = conn.execute(
+            "INSERT INTO eval_runs(ts, username, backend, n_cases, n_passed, "
+            "pass_rate, mean_overall) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (_now(), username, backend, int(n_cases), int(n_passed),
+             float(pass_rate), float(mean_overall)),
+        )
+        return int(cur.lastrowid)
+
+
+def list_eval_runs(*, limit: int = 60, backend: Optional[str] = None) -> list[dict]:
+    """Newest-last (so a chart can plot left → right with no reverse).
+
+    `limit` caps the number of rows; `backend` filters to one per-backend
+    series. Without a backend filter, mixing 100% main runs with 7% holdout
+    runs is misleading — but this DB only stores main-corpus runs."""
+    init_db()
+    with connect() as conn:
+        if backend:
+            rows = conn.execute(
+                "SELECT id, ts, backend, n_cases, n_passed, pass_rate, mean_overall "
+                "FROM eval_runs WHERE backend = ? "
+                "ORDER BY ts DESC LIMIT ?", (backend, int(limit))).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, ts, backend, n_cases, n_passed, pass_rate, mean_overall "
+                "FROM eval_runs "
+                "ORDER BY ts DESC LIMIT ?", (int(limit),)).fetchall()
+        return [dict(r) for r in reversed(rows)]
+
+
 # ---------------------------- user connectors ------------------------------
 
 def upsert_user_connector(*, username: str, kind: str,
@@ -257,22 +321,34 @@ def delete_user_connector(username: str, kind: str) -> bool:
 
 # ---------------------------- user questions -------------------------------
 
+_RESULT_JSON_MAX_BYTES = 50 * 1024     # 50 KB — drop if larger
+
+
 def insert_user_question(*, username: str, question: str, backend: str,
                          actual_backend: Optional[str],
                          planned_tools: list[str],
                          dataset_name: Optional[str],
+                         result_json: Optional[str] = None,
                          max_unpinned: int = 50) -> int:
     """Persist a workbench question and prune the user's unpinned history
-    down to `max_unpinned` rows.  Returns the new row id."""
+    down to `max_unpinned` rows.  Returns the new row id.
+
+    `result_json` should be the full plan+observations payload as a JSON
+    string. Capped at ~50 KB on disk; oversize values are stored as None
+    so the listing UI doesn't crash on huge cohort matrices."""
     import json as _j
+    if result_json is not None and len(result_json) > _RESULT_JSON_MAX_BYTES:
+        result_json = None
     init_db()
     with connect() as conn:
         cur = conn.execute(
             "INSERT INTO user_questions("
             "  username, question, backend, actual_backend, planned_tools,"
-            "  dataset_name, asked_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "  dataset_name, asked_at, result_json) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (username, question, backend, actual_backend,
-             _j.dumps(planned_tools or []), dataset_name, _now()),
+             _j.dumps(planned_tools or []), dataset_name, _now(),
+             result_json),
         )
         new_id = int(cur.lastrowid)
         # Prune oldest UNPINNED rows beyond max_unpinned for this user.
@@ -286,6 +362,29 @@ def insert_user_question(*, username: str, question: str, backend: str,
             (username, int(max_unpinned)),
         )
     return new_id
+
+
+def get_user_question(username: str, question_id: int) -> Optional[dict]:
+    """Returns the full row (incl. parsed planned_tools and result_json),
+    or None if not the caller's question."""
+    import json as _j
+    init_db()
+    with connect() as conn:
+        r = conn.execute(
+            "SELECT id, question, backend, actual_backend, planned_tools, "
+            "       dataset_name, pinned, asked_at, result_json "
+            "FROM user_questions WHERE username = ? AND id = ?",
+            (username, int(question_id)),
+        ).fetchone()
+        if not r:
+            return None
+        d = dict(r)
+        try:
+            d["planned_tools"] = _j.loads(d["planned_tools"] or "[]")
+        except Exception:
+            d["planned_tools"] = []
+        d["pinned"] = bool(d["pinned"])
+        return d
 
 
 def list_user_questions(username: str, *, limit: int = 50) -> list[dict]:

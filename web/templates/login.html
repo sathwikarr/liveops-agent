@@ -63,6 +63,11 @@
         Already have an account? <a class="font-medium text-accent-400 hover:underline" href="/login?next={{ next }}">Log in</a>.
       {% else %}
         New here? <a class="font-medium text-accent-400 hover:underline" href="/signup?next={{ next }}">Create an account</a>.
+        <span class="mx-1 text-slate-700">·</span>
+        <a class="text-slate-500 hover:text-slate-300" href="#"
+           onclick="event.preventDefault(); alert('Self-serve password reset isn&#39;t live yet — open an issue on GitHub or email the maintainer to reset your account.'); return false;">
+          Forgot password?
+        </a>
       {% endif %}
     </p>
   </div>

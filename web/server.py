@@ -197,6 +197,10 @@ def create_app() -> FastAPI:
         https_only=False, same_site="lax",
     )
 
+    # Reset the rate-limiter on every fresh app (tests assume isolation; in
+    # production this happens naturally on dyno restart anyway).
+    _RATE_BUCKETS.clear()
+
     if STATIC_DIR.exists():
         app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
@@ -353,6 +357,12 @@ def _register_routes(app: FastAPI) -> None:
         username: str = Form(...), password: str = Form(...),
         next: str = Form("/dashboard"),
     ):
+        # Rate limit by IP — prevents credential-stuffing brute force.
+        wait = _rate_limit(f"login:{_client_ip(request)}",
+                            max_attempts=5, window_s=60)
+        if wait is not None:
+            _flash(request, f"Too many login attempts. Try again in {wait}s.", "error")
+            return RedirectResponse(f"/login?next={next}", status_code=303)
         from agent.auth import login
         ok, msg = login(username.strip(), password)
         if not ok:
@@ -368,6 +378,12 @@ def _register_routes(app: FastAPI) -> None:
         username: str = Form(...), password: str = Form(...),
         confirm: str = Form(""), next: str = Form("/dashboard"),
     ):
+        # Rate limit signups too — bots love free accounts.
+        wait = _rate_limit(f"signup:{_client_ip(request)}",
+                            max_attempts=5, window_s=60)
+        if wait is not None:
+            _flash(request, f"Too many signup attempts. Try again in {wait}s.", "error")
+            return RedirectResponse(f"/signup?next={next}", status_code=303)
         if confirm and confirm != password:
             _flash(request, "Passwords don't match.", "error")
             return RedirectResponse(f"/signup?next={next}", status_code=303)
@@ -390,22 +406,61 @@ def _register_routes(app: FastAPI) -> None:
     @app.get("/dashboard", response_class=HTMLResponse)
     async def dashboard(request: Request):
         user = _require_user(request)
-        # Light-weight stats — pull from the demo dataset for a real preview.
-        df = _sample_df()
-        from analyst import analysis as A
+        from agent import db
+        # User's saved datasets + which one is active.
+        datasets = db.list_user_datasets(user)
+        active_id = request.session.get("workbench_dataset_id")
+        # Recent + pinned questions (top 8).
+        history = db.list_user_questions(user, limit=8)
+        # Connector status.
+        connectors = db.list_user_connectors(user)
+        kinds = {c["kind"] for c in connectors}
+        # Active dataset profile + 6-week revenue chart for charts panel.
+        df = _active_df(request)
         rm = _default_role_map(df)
-        try:
-            trend = A.revenue_trend(df, role_map=rm, freq="W").tail(8)
-            trend_records = trend.to_dict("records")
-        except Exception:
-            trend_records = []
-        return _render(request, "dashboard.html",
-                       user=user, trend_records=trend_records)
+        ds_meta = _active_meta(request)
+        charts = _build_demo_charts(df, rm)   # reuse same shape as /demo
+        # Profile is cheap; expose only the KPI block + count of tips.
+        profile = _dataset_profile(df, rm)
+        return _render(
+            request, "dashboard.html",
+            user=user,
+            datasets=datasets,
+            active_dataset_id=active_id,
+            history=history,
+            connectors_set=sorted(kinds),
+            slack_configured=("slack_webhook" in kinds),
+            smtp_configured=("smtp_config"   in kinds),
+            dataset=ds_meta,
+            kpis=profile.get("kpis", {}),
+            n_tips=len(profile.get("tips", [])),
+            charts=charts,
+        )
 
     @app.get("/run-agent", response_class=HTMLResponse)
     async def run_agent_page(request: Request):
         user = _require_user(request)
-        return _render(request, "run_agent.html", user=user)
+        from agent import db
+        kinds = {c["kind"] for c in db.list_user_connectors(user)}
+        return _render(request, "run_agent.html",
+                       user=user,
+                       dataset=_active_meta(request),
+                       slack_configured=("slack_webhook" in kinds),
+                       smtp_configured=("smtp_config"   in kinds))
+
+    @app.get("/history", response_class=HTMLResponse)
+    async def history_page(request: Request):
+        """Combined chronological feed of the user's uploads + question runs.
+        Each question is expandable to show the stored answer + plan."""
+        user = _require_user(request)
+        from agent import db
+        datasets = db.list_user_datasets(user)
+        questions = db.list_user_questions(user, limit=50)
+        # Drop the "active" marker on past datasets — we just need a chip.
+        active_id = request.session.get("workbench_dataset_id")
+        return _render(request, "history.html",
+                       user=user, datasets=datasets, questions=questions,
+                       active_dataset_id=active_id)
 
     @app.get("/settings", response_class=HTMLResponse)
     async def settings_page(request: Request):
@@ -604,10 +659,19 @@ def _register_routes(app: FastAPI) -> None:
                 from agent import db
                 planned = [s.get("tool", "") for s in body.get("plan", {}).get("steps", [])]
                 ds_meta = _active_meta(request)
+                # Persist the full payload so the user can re-open it later
+                # from /history. We strip the question_id we're about to add
+                # to keep the payload self-contained, and json.dumps with a
+                # default for non-serialisable bits (e.g. NaN already pruned).
+                try:
+                    result_text = json.dumps(_json_safe(body), default=str)
+                except Exception:
+                    result_text = None
                 qid = db.insert_user_question(
                     username=user, question=question, backend=backend,
                     actual_backend=actual_backend, planned_tools=planned,
                     dataset_name=ds_meta.get("name"),
+                    result_json=result_text,
                 )
                 body["question_id"] = qid
             except Exception:
@@ -615,7 +679,8 @@ def _register_routes(app: FastAPI) -> None:
         return _json_safe(body)
 
     @app.post("/api/evals/run", response_class=JSONResponse)
-    async def api_evals_run(payload: Dict[str, Any] = Body(default={})):
+    async def api_evals_run(request: Request,
+                             payload: Dict[str, Any] = Body(default={})):
         backend = payload.get("backend") or "heuristic"
         tags = payload.get("tags") or None
         ids = payload.get("ids") or None
@@ -625,7 +690,29 @@ def _register_routes(app: FastAPI) -> None:
         if not cases:
             raise HTTPException(400, "no cases matched the filters")
         report = run_all(cases, df, backend=backend)
-        return _json_safe(report.to_dict())
+        body = report.to_dict()
+        # Persist to the timeline only when this is a FULL-corpus run with
+        # no tag/id filter — partial runs would distort the trend.
+        if not tags and not ids:
+            try:
+                from agent import db
+                db.insert_eval_run(
+                    username=request.session.get("username"),
+                    backend=body.get("backend", backend),
+                    n_cases=int(body.get("n_cases", 0)),
+                    n_passed=int(body.get("n_passed", 0)),
+                    pass_rate=float(body.get("pass_rate", 0.0)),
+                    mean_overall=float(body.get("mean_overall", 0.0)),
+                )
+            except Exception:
+                pass
+        return _json_safe(body)
+
+    @app.get("/api/evals/timeline", response_class=JSONResponse)
+    async def api_evals_timeline(backend: Optional[str] = None,
+                                  limit: int = 60):
+        from agent import db
+        return {"runs": db.list_eval_runs(limit=limit, backend=backend)}
 
     @app.get("/api/evals/baseline", response_class=JSONResponse)
     async def api_evals_baseline():
@@ -874,6 +961,27 @@ def _register_routes(app: FastAPI) -> None:
         if not db.set_user_question_pinned(user, int(qid), pinned):
             raise HTTPException(404, "question not found")
         return {"ok": True, "id": int(qid), "pinned": pinned}
+
+    @app.get("/api/agent/history/{question_id}", response_class=JSONResponse)
+    async def api_agent_history_one(request: Request, question_id: int):
+        """Return the full stored payload for one of the user's past questions."""
+        user = request.session.get("username")
+        if not user:
+            raise HTTPException(401, "log in to view past results")
+        from agent import db
+        row = db.get_user_question(user, int(question_id))
+        if not row:
+            raise HTTPException(404, "question not found")
+        # If we have the full payload stored, return it nested under `result`.
+        result = None
+        if row.get("result_json"):
+            try:
+                result = json.loads(row["result_json"])
+            except Exception:
+                result = None
+        # Drop the raw blob from the response — the parsed copy is enough.
+        row.pop("result_json", None)
+        return {"question": row, "result": result}
 
     @app.post("/api/agent/history/clear", response_class=JSONResponse)
     async def api_agent_history_clear(request: Request,
@@ -1441,6 +1549,41 @@ def _build_demo_charts(df: pd.DataFrame,
         pass
 
     return out
+
+
+def _client_ip(request: Request) -> str:
+    """Best-effort client IP for the rate limiter. Honours an
+    `X-Forwarded-For` set by the platform's reverse proxy (Render injects
+    this) and falls back to the socket peer."""
+    fwd = request.headers.get("x-forwarded-for") or ""
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return (request.client.host if request.client else "unknown")
+
+
+# In-process sliding-window rate limiter.  Maps key → list[float] of attempt
+# timestamps within the active window.  Single-instance only — switch to
+# Redis if/when this app fans out beyond one Render dyno.
+_RATE_BUCKETS: Dict[str, List[float]] = {}
+
+
+def _rate_limit(key: str, *, max_attempts: int, window_s: int) -> Optional[int]:
+    """Returns None if the caller is under the limit, otherwise the number
+    of seconds they need to wait before retrying."""
+    import time as _t
+    now = _t.monotonic()
+    cutoff = now - window_s
+    bucket = _RATE_BUCKETS.get(key, [])
+    # Drop expired hits
+    bucket = [t for t in bucket if t > cutoff]
+    if len(bucket) >= max_attempts:
+        # Earliest hit defines when the window slides past max - 1.
+        retry_in = int(bucket[0] + window_s - now) + 1
+        _RATE_BUCKETS[key] = bucket
+        return max(1, retry_in)
+    bucket.append(now)
+    _RATE_BUCKETS[key] = bucket
+    return None
 
 
 def _backend_meta(*, requested: str, actual: str,

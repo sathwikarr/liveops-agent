@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}History · LiveOps Agent{% endblock %}
+
+{% block content %}
+<header class="mb-8 hero-enter">
+  <span class="eyebrow">history · @{{ user }}</span>
+  <h1 class="mt-3 font-display text-3xl font-semibold tracking-tight md:text-4xl">
+    Your <span class="accent-text">past runs</span>
+  </h1>
+  <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-slate-400">
+    Every question + dataset upload tied to your account. Click any past question to re-open the answer, plan, and observation trace.
+  </p>
+</header>
+
+<div x-data="historyPage()" class="space-y-8">
+
+  {# ============================================================ #}
+  {# UPLOADS — saved datasets                                       #}
+  {# ============================================================ #}
+  <section class="reveal">
+    <div class="flex items-baseline justify-between">
+      <h2 class="font-display text-base font-semibold">Uploads</h2>
+      <a href="/workbench" class="text-xs text-accent-400 hover:underline">Upload new →</a>
+    </div>
+    {% if datasets %}
+      <div class="mt-3 overflow-x-auto rounded-xl border border-white/5 bg-ink-900/40">
+        <table class="min-w-full text-sm">
+          <thead class="bg-white/[0.03] text-[10px] uppercase tracking-widest text-slate-500">
+            <tr>
+              <th class="px-4 py-2.5 text-left font-medium">name</th>
+              <th class="px-4 py-2.5 text-right font-medium">rows</th>
+              <th class="px-4 py-2.5 text-right font-medium">cols</th>
+              <th class="px-4 py-2.5 text-left font-medium">uploaded</th>
+              <th class="px-4 py-2.5 text-right font-medium"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5">
+            {% for d in datasets %}
+              <tr class="transition hover:bg-white/[0.02]">
+                <td class="px-4 py-2 font-mono text-xs text-slate-200">
+                  {{ d.original_name }}
+                  {% if d.id == active_dataset_id %}
+                    <span class="ml-2 rounded-md border border-accent-500/30 bg-accent-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-widest text-accent-400">active</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-2 text-right tabular-nums text-slate-300">{{ '{:,}'.format(d.n_rows) }}</td>
+                <td class="px-4 py-2 text-right tabular-nums text-slate-300">{{ d.n_cols }}</td>
+                <td class="px-4 py-2 text-[11px] text-slate-500">{{ d.uploaded_at.replace('T', ' ') }}</td>
+                <td class="px-4 py-2 text-right text-xs">
+                  <a href="/workbench"
+                     class="text-slate-400 hover:text-accent-400">Use →</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="mt-3 rounded-md border border-dashed border-white/10 p-6 text-center text-sm text-slate-500">
+        No uploads yet — head to the <a href="/workbench" class="text-accent-400 hover:underline">workbench</a>.
+      </p>
+    {% endif %}
+  </section>
+
+  {# ============================================================ #}
+  {# QUESTIONS — chronological with expandable past results        #}
+  {# ============================================================ #}
+  <section class="reveal">
+    <div class="flex items-baseline justify-between">
+      <h2 class="font-display text-base font-semibold">Question runs</h2>
+      <span class="text-[10px] uppercase tracking-widest text-slate-500">
+        {{ questions|length }} total
+      </span>
+    </div>
+    {% if questions %}
+      <ul class="mt-3 space-y-2">
+        {% for q in questions %}
+          <li class="glass rounded-md border border-white/5 p-3">
+            <div class="flex items-start gap-3">
+              {% if q.pinned %}
+                <svg viewBox="0 0 16 16" class="mt-1 h-3.5 w-3.5 flex-shrink-0 text-amber-400" fill="currentColor" aria-label="Pinned">
+                  <path d="M5.5 1l-1 4H2l4 3-1.5 5L8 10l3.5 3L10 8l4-3h-2.5l-1-4z"/>
+                </svg>
+              {% else %}
+                <span class="mt-1 inline-block h-3.5 w-3.5 flex-shrink-0"></span>
+              {% endif %}
+
+              <div class="min-w-0 flex-1">
+                <button type="button"
+                        @click="toggle({{ q.id }})"
+                        class="block w-full text-left">
+                  <div class="text-sm text-slate-100" x-text="''" x-init="$el.textContent = {{ q.question|tojson }}"></div>
+                  <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
+                    <code class="font-mono">{{ q.planned_tools|join(' · ') if q.planned_tools else 'no plan' }}</code>
+                    <span>·</span>
+                    <span>{{ q.actual_backend or q.backend }}</span>
+                    {% if q.dataset_name %}
+                      <span>·</span><span class="truncate">{{ q.dataset_name }}</span>
+                    {% endif %}
+                    <span>·</span>
+                    <span>{{ q.asked_at.replace('T', ' ') }}</span>
+                  </div>
+                </button>
+
+                <!-- Expanded view: full answer + plan + observations -->
+                <template x-if="open === {{ q.id }}">
+                  <div class="mt-3 space-y-3 rounded-md border border-white/5 bg-ink-950/40 p-3">
+                    <template x-if="loading">
+                      <div class="space-y-2" aria-busy="true">
+                        <div class="skeleton h-3 w-32"></div>
+                        <div class="skeleton h-3.5 w-11/12"></div>
+                        <div class="skeleton h-3.5 w-9/12"></div>
+                      </div>
+                    </template>
+                    <template x-if="!loading && error">
+                      <div class="text-xs text-rose2-400" x-text="error"></div>
+                    </template>
+                    <template x-if="!loading && !error && stored && stored.result">
+                      <div class="space-y-3">
+                        <div>
+                          <div class="text-[10px] uppercase tracking-widest text-accent-400">Answer</div>
+                          <pre class="mt-1.5 whitespace-pre-wrap font-mono text-xs leading-relaxed text-slate-200" x-text="stored.result.answer"></pre>
+                        </div>
+                        <div>
+                          <div class="text-[10px] uppercase tracking-widest text-slate-400">Plan</div>
+                          <ol class="mt-1.5 space-y-1.5 text-xs">
+                            <template x-for="(s, i) in stored.result.plan.steps" :key="i">
+                              <li class="rounded border border-white/5 bg-white/[0.03] p-2">
+                                <code class="font-mono text-accent-400" x-text="s.tool"></code>
+                                <span class="ml-2 text-[10px] text-slate-500" x-text="JSON.stringify(s.args)"></span>
+                                <div class="mt-0.5 text-[10px] italic text-slate-400" x-text="s.why"></div>
+                              </li>
+                            </template>
+                          </ol>
+                        </div>
+                        <details class="text-xs">
+                          <summary class="cursor-pointer text-slate-400 hover:text-slate-200">Observations</summary>
+                          <pre class="mt-2 max-h-72 overflow-auto rounded-md bg-ink-950/80 p-3 font-mono text-[10px] text-slate-300" x-text="JSON.stringify(stored.result.observations, null, 2)"></pre>
+                        </details>
+                      </div>
+                    </template>
+                    <template x-if="!loading && !error && stored && !stored.result">
+                      <div class="text-xs text-slate-500">
+                        Result wasn't stored for this question (oversize payload, or asked before history was added).
+                        The plan above is what ran.
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="mt-3 rounded-md border border-dashed border-white/10 p-6 text-center text-sm text-slate-500">
+        No questions yet. Ask one in the
+        <a href="/workbench" class="text-accent-400 hover:underline">workbench</a>.
+      </p>
+    {% endif %}
+  </section>
+</div>
+
+<script>
+  function historyPage() {
+    return {
+      open: null,
+      loading: false,
+      error: null,
+      stored: null,
+      async toggle(id) {
+        if (this.open === id) {
+          this.open = null; this.stored = null; this.error = null;
+          return;
+        }
+        this.open = id;
+        this.loading = true; this.error = null; this.stored = null;
+        try {
+          const r = await fetch('/api/agent/history/' + id);
+          const body = await r.json();
+          if (!r.ok) throw new Error(body.detail || ('HTTP ' + r.status));
+          this.stored = body;
+        } catch (e) { this.error = e.message; }
+        finally { this.loading = false; }
+      },
+    };
+  }
+</script>
+{% endblock %}

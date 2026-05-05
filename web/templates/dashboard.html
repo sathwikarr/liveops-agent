@@ -3,65 +3,329 @@
 {% block title %}Dashboard · LiveOps Agent{% endblock %}
 
 {% block content %}
-<header class="mb-10 flex flex-wrap items-end justify-between gap-4 hero-enter">
-  <div>
-    <span class="eyebrow">dashboard · @{{ user }}</span>
-    <h1 class="mt-3 font-display text-4xl font-semibold tracking-tight md:text-5xl">
-      Welcome back, <span class="accent-text">{{ user }}</span>.
-    </h1>
-    <p class="mt-3 text-[15px] leading-relaxed text-slate-400">
-      Your sandbox dataset, refreshed on each load. Connect a real source from
-      <a href="/run-agent" class="text-accent-400 hover:underline">Run agent</a> to swap it out.
-    </p>
-  </div>
-  <a href="/run-agent"
-     class="rounded-md bg-accent-500 px-4 py-2.5 text-sm font-medium text-ink-950 shadow-sm transition hover:bg-accent-400">
-    Run an agent pass
-  </a>
+{% set is_fresh = (datasets|length == 0) and (history|length == 0) %}
+
+<header class="mb-8 hero-enter">
+  <span class="eyebrow">dashboard · @{{ user }}</span>
+  <h1 class="mt-3 font-display text-3xl font-semibold tracking-tight md:text-4xl">
+    {% if is_fresh %}
+      Welcome, <span class="accent-text">{{ user }}</span>.
+    {% else %}
+      Hi <span class="accent-text">{{ user }}</span>.
+    {% endif %}
+  </h1>
+  <p class="mt-2 text-[15px] leading-relaxed text-slate-400">
+    {% if is_fresh %}
+      Let's get you set up. Three things to do — none of them take more than a minute.
+    {% else %}
+      Active dataset: <code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs">{{ dataset.name }}</code> ·
+      <span class="text-slate-500">{{ '{:,}'.format(dataset.n_rows) }} rows</span>
+      {% if dataset.source == 'bundled' %}
+        <span class="ml-1 rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] uppercase tracking-widest text-slate-500">bundled</span>
+      {% endif %}
+    {% endif %}
+  </p>
 </header>
 
+{# ============================================================ #}
+{# ONBOARDING CHECKLIST · only for fresh users                  #}
+{# ============================================================ #}
+{% if is_fresh %}
+<section class="reveal mb-10">
+  <ol class="grid gap-4 md:grid-cols-3">
+    <li class="glass rounded-xl p-5">
+      <div class="flex items-baseline gap-2">
+        <span class="font-mono text-xs text-slate-500">01</span>
+        <span class="font-display text-base font-semibold">Upload a dataset</span>
+      </div>
+      <p class="mt-2 text-sm leading-relaxed text-slate-400">
+        CSV with at least an order date and an amount column. We'll infer the rest.
+      </p>
+      <a href="/workbench"
+         class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-accent-400 hover:underline">
+        Open workbench
+        <svg viewBox="0 0 16 16" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </a>
+    </li>
+    <li class="glass rounded-xl p-5">
+      <div class="flex items-baseline gap-2">
+        <span class="font-mono text-xs text-slate-500">02</span>
+        <span class="font-display text-base font-semibold">Ask the agent</span>
+      </div>
+      <p class="mt-2 text-sm leading-relaxed text-slate-400">
+        Plain-English questions over the data. Watch the plan + tool trace + answer.
+      </p>
+      <a href="/workbench"
+         class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-accent-400 hover:underline">
+        Try a question
+        <svg viewBox="0 0 16 16" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </a>
+    </li>
+    <li class="glass rounded-xl p-5">
+      <div class="flex items-baseline gap-2">
+        <span class="font-mono text-xs text-slate-500">03</span>
+        <span class="font-display text-base font-semibold">Wire a notification channel</span>
+      </div>
+      <p class="mt-2 text-sm leading-relaxed text-slate-400">
+        Slack webhook or SMTP — encrypted at rest. Optional, but unlocks dispatching.
+      </p>
+      <a href="/settings"
+         class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-accent-400 hover:underline">
+        Open settings
+        <svg viewBox="0 0 16 16" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </a>
+    </li>
+  </ol>
+</section>
+{% endif %}
+
+{# ============================================================ #}
+{# ACTIVE DATASET KPIs                                           #}
+{# ============================================================ #}
 <section class="reveal">
-  <h2 class="font-display text-lg font-semibold text-slate-200">Weekly revenue (last 8 weeks)</h2>
-  {% if trend_records %}
-    <div class="mt-4 overflow-x-auto rounded-xl border border-white/5 bg-ink-900/40">
-      <table class="min-w-full text-sm">
-        <thead class="bg-white/[0.03] text-xs uppercase tracking-widest text-slate-500">
-          <tr>
-            {% for k in trend_records[0].keys() %}<th class="px-4 py-3 text-left font-medium">{{ k }}</th>{% endfor %}
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-white/5">
-          {% for row in trend_records %}
-            <tr class="transition hover:bg-white/[0.03]">
-              {% for v in row.values() %}<td class="whitespace-nowrap px-4 py-2.5 text-slate-300">{{ v }}</td>{% endfor %}
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    <div class="mt-4 rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center text-sm text-slate-400">
-      No trend yet. Connect a dataset to see this populate.
-    </div>
+  <div class="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] md:grid-cols-4">
+    {% set tile = [
+      ('Revenue',   ('${:,.0f}'.format(kpis.total_revenue)) if kpis.total_revenue is defined else '—'),
+      ('Orders',    '{:,}'.format(kpis.n_orders)            if kpis.n_orders     is defined else '—'),
+      ('Customers', '{:,}'.format(kpis.n_customers)         if kpis.n_customers  is defined else '—'),
+      ('Products',  '{:,}'.format(kpis.n_products)          if kpis.n_products   is defined else '—'),
+    ] %}
+    {% for label, value in tile %}
+      <div class="bg-ink-900/60 p-5">
+        <div class="text-[10px] uppercase tracking-widest text-slate-500">{{ label }}</div>
+        <div class="mt-1.5 font-display text-2xl font-semibold tracking-tight text-white">{{ value }}</div>
+        {% if loop.first and kpis.date_min and kpis.date_max %}
+          <div class="mt-1 text-[11px] text-slate-500">{{ kpis.date_min }} → {{ kpis.date_max }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  {% if n_tips > 0 %}
+    <p class="mt-2 text-[11px] text-amber-400">
+      {{ n_tips }} signal-density warning{{ '' if n_tips == 1 else 's' }} on this dataset —
+      <a href="/workbench" class="underline-offset-2 hover:underline">open workbench</a> to see them.
+    </p>
   {% endif %}
 </section>
 
-<section class="mt-12 grid gap-6 md:grid-cols-3">
-  {% set cards = [
-    ('/workbench', 'Workbench', 'Ask a question',      'Plain English over your dataset, with a tool trace.'),
-    ('/evals',     'Evals',     'Run the harness',     '55 cases, regression-checked against the pinned baseline.'),
-    ('/run-agent', 'Agent',     'Run a full ops pass', 'Detect anomalies, recommend actions, dispatch notifications.'),
-  ] %}
-  {% for href, kicker, title, body in cards %}
-    <a href="{{ href }}"
-       class="reveal reveal-delay-{{ loop.index }} lift group glass rounded-xl p-6 transition">
-      <div class="text-xs font-medium uppercase tracking-widest text-accent-400">{{ kicker }}</div>
-      <div class="mt-2 flex items-center gap-2 font-display text-lg font-semibold group-hover:text-white">
-        {{ title }}
-        <svg viewBox="0 0 16 16" class="h-3.5 w-3.5 -translate-x-1 opacity-0 transition group-hover:translate-x-0 group-hover:opacity-100" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+{# ============================================================ #}
+{# CHARTS · weekly revenue + churn                                #}
+{# ============================================================ #}
+{% if charts.revenue or charts.churn %}
+<section class="mt-8 grid gap-6 lg:grid-cols-3">
+  {% if charts.revenue %}
+    <div class="reveal glass rounded-xl p-5 lg:col-span-2">
+      <div class="flex items-baseline justify-between">
+        <h2 class="font-display text-base font-semibold">Weekly revenue</h2>
+        <span class="text-[11px] uppercase tracking-widest text-slate-500">{{ charts.revenue.labels|length }} weeks</span>
       </div>
-      <p class="mt-2 text-sm leading-relaxed text-slate-400">{{ body }}</p>
+      <div class="mt-3 h-[220px]"><canvas id="dash-revenue"></canvas></div>
+    </div>
+  {% endif %}
+  {% if charts.churn %}
+    <div class="reveal glass rounded-xl p-5">
+      <div class="flex items-baseline justify-between">
+        <h2 class="font-display text-base font-semibold">Customer status</h2>
+        <span class="text-[11px] uppercase tracking-widest text-slate-500">churn risk</span>
+      </div>
+      <div class="mt-3 h-[220px]"><canvas id="dash-churn"></canvas></div>
+    </div>
+  {% endif %}
+</section>
+<script id="dash-chart-data" type="application/json">{{ charts|tojson }}</script>
+<script>
+  (function () {
+    if (typeof Chart === 'undefined') return;
+    var data = JSON.parse(document.getElementById('dash-chart-data').textContent);
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+    Chart.defaults.font.family = "Inter, ui-sans-serif, system-ui, sans-serif";
+    var emerald = '#10b981', emeraldSoft = 'rgba(16,185,129,0.18)';
+    var rose = '#f43f5e', amber = '#f59e0b';
+    var grid = { color: 'rgba(255,255,255,0.05)' };
+    var baseOpts = {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+                 tooltip: { backgroundColor: '#10131a', borderColor: 'rgba(255,255,255,0.08)',
+                            borderWidth: 1, padding: 10, cornerRadius: 6 } },
+    };
+    if (data.revenue) {
+      new Chart(document.getElementById('dash-revenue').getContext('2d'), {
+        type: 'line',
+        data: { labels: data.revenue.labels, datasets: [{
+          label: 'revenue', data: data.revenue.values,
+          borderColor: emerald, backgroundColor: emeraldSoft,
+          fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2,
+        }]},
+        options: { ...baseOpts, scales: { x: { grid, ticks: { maxTicksLimit: 7 } }, y: { grid, beginAtZero: true } } },
+      });
+    }
+    if (data.churn) {
+      var colorFor = function (l) {
+        if (/churn/i.test(l)) return rose;
+        if (/risk/i.test(l))  return amber;
+        if (/cool/i.test(l))  return '#fbbf24';
+        return emerald;
+      };
+      new Chart(document.getElementById('dash-churn').getContext('2d'), {
+        type: 'doughnut',
+        data: { labels: data.churn.labels, datasets: [{
+          data: data.churn.values,
+          backgroundColor: data.churn.labels.map(colorFor),
+          borderColor: '#0a0b10', borderWidth: 2,
+        }]},
+        options: { ...baseOpts, cutout: '60%',
+                    plugins: { ...baseOpts.plugins,
+                               legend: { display: true, position: 'bottom',
+                                         labels: { color: '#cbd5e1', boxWidth: 10, padding: 10, font: { size: 11 } } } } },
+      });
+    }
+  })();
+</script>
+{% endif %}
+
+{# ============================================================ #}
+{# TWO-COLUMN: SAVED DATASETS + RECENT QUESTIONS                 #}
+{# ============================================================ #}
+<section class="mt-8 grid gap-6 lg:grid-cols-2">
+
+  <div class="reveal glass rounded-xl p-6">
+    <div class="flex items-baseline justify-between">
+      <h2 class="font-display text-base font-semibold">My datasets</h2>
+      <a href="/workbench" class="text-xs text-accent-400 hover:underline">Upload new →</a>
+    </div>
+    {% if datasets %}
+      <ul class="mt-3 divide-y divide-white/5 text-sm">
+        {% for d in datasets[:6] %}
+          <li class="flex items-center justify-between gap-3 py-2">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <code class="truncate font-mono text-xs text-slate-200">{{ d.original_name }}</code>
+                {% if d.id == active_dataset_id %}
+                  <span class="rounded-md border border-accent-500/30 bg-accent-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-widest text-accent-400">active</span>
+                {% endif %}
+              </div>
+              <div class="mt-0.5 text-[11px] text-slate-500">
+                {{ '{:,}'.format(d.n_rows) }} rows · {{ d.n_cols }} cols · {{ d.uploaded_at.replace('T', ' ') }}
+              </div>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+      {% if datasets|length > 6 %}
+        <p class="mt-3 text-[11px] text-slate-500">+ {{ datasets|length - 6 }} more in the workbench switcher.</p>
+      {% endif %}
+    {% else %}
+      <p class="mt-3 text-sm text-slate-400">No saved datasets yet — upload one from the
+        <a href="/workbench" class="text-accent-400 hover:underline">workbench</a> to start.</p>
+    {% endif %}
+  </div>
+
+  <div class="reveal glass rounded-xl p-6">
+    <div class="flex items-baseline justify-between">
+      <h2 class="font-display text-base font-semibold">Recent questions</h2>
+      <a href="/workbench" class="text-xs text-accent-400 hover:underline">Ask a new one →</a>
+    </div>
+    {% if history %}
+      <ul class="mt-3 divide-y divide-white/5 text-sm">
+        {% for h in history %}
+          <li class="flex items-start gap-2 py-2">
+            {% if h.pinned %}
+              <svg viewBox="0 0 16 16" class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-400" fill="currentColor" aria-label="Pinned">
+                <path d="M5.5 1l-1 4H2l4 3-1.5 5L8 10l3.5 3L10 8l4-3h-2.5l-1-4z"/>
+              </svg>
+            {% else %}
+              <span class="mt-0.5 inline-block h-3.5 w-3.5 flex-shrink-0"></span>
+            {% endif %}
+            <div class="min-w-0 flex-1">
+              <div class="truncate text-slate-200">{{ h.question }}</div>
+              <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
+                <code class="font-mono">{{ h.planned_tools|join(' · ') if h.planned_tools else 'no plan' }}</code>
+                <span>·</span>
+                <span>{{ h.actual_backend or h.backend }}</span>
+                {% if h.dataset_name %}<span>·</span><span class="truncate">{{ h.dataset_name }}</span>{% endif %}
+              </div>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="mt-3 text-sm text-slate-400">No questions yet — head to the
+        <a href="/workbench" class="text-accent-400 hover:underline">workbench</a> and ask one.</p>
+    {% endif %}
+  </div>
+
+</section>
+
+{# ============================================================ #}
+{# CONNECTORS                                                    #}
+{# ============================================================ #}
+<section class="reveal mt-8 glass rounded-xl p-6">
+  <div class="flex items-baseline justify-between">
+    <h2 class="font-display text-base font-semibold">Notification channels</h2>
+    <a href="/settings" class="text-xs text-accent-400 hover:underline">Manage in settings →</a>
+  </div>
+  <div class="mt-4 grid gap-4 sm:grid-cols-2">
+    <div class="rounded-md border border-white/5 bg-white/[0.02] p-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="grid h-7 w-7 place-items-center rounded-md border border-white/10 bg-white/[0.04] text-accent-400">
+            <span class="font-display text-xs font-bold">S</span>
+          </span>
+          <span class="font-display text-sm font-semibold">Slack webhook</span>
+        </div>
+        {% if slack_configured %}
+          <span class="rounded-md border border-accent-500/30 bg-accent-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-accent-400">configured</span>
+        {% else %}
+          <a href="/settings" class="text-xs text-slate-400 hover:text-accent-400">Set up</a>
+        {% endif %}
+      </div>
+      <p class="mt-2 text-xs leading-relaxed text-slate-500">
+        Anomaly + recommendation pings post here.
+      </p>
+    </div>
+    <div class="rounded-md border border-white/5 bg-white/[0.02] p-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="grid h-7 w-7 place-items-center rounded-md border border-white/10 bg-white/[0.04] text-accent-400">
+            <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16v16H4z"/><path d="M4 4l8 8 8-8"/>
+            </svg>
+          </span>
+          <span class="font-display text-sm font-semibold">Email (SMTP)</span>
+        </div>
+        {% if smtp_configured %}
+          <span class="rounded-md border border-accent-500/30 bg-accent-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-accent-400">configured</span>
+        {% else %}
+          <a href="/settings" class="text-xs text-slate-400 hover:text-accent-400">Set up</a>
+        {% endif %}
+      </div>
+      <p class="mt-2 text-xs leading-relaxed text-slate-500">
+        STARTTLS to any SMTP server. Encrypted at rest.
+      </p>
+    </div>
+  </div>
+</section>
+
+{# ============================================================ #}
+{# QUICK LINKS                                                   #}
+{# ============================================================ #}
+<section class="mt-8 grid gap-4 md:grid-cols-3">
+  {% set quick = [
+    ('/workbench', 'Workbench', 'Ask a question and see the plan + observations.'),
+    ('/evals',     'Evals',     '55 cases pinned at 100% main / 7.1% holdout.'),
+    ('/run-agent', 'Run agent', 'Walk the full ingest → score → notify pass.'),
+  ] %}
+  {% for href, title, body in quick %}
+    <a href="{{ href }}"
+       class="reveal reveal-delay-{{ loop.index }} lift group glass rounded-xl p-5">
+      <div class="flex items-center gap-2 font-display text-sm font-semibold group-hover:text-white">
+        {{ title }}
+        <svg viewBox="0 0 16 16" class="h-3 w-3 -translate-x-1 opacity-0 transition group-hover:translate-x-0 group-hover:opacity-100" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </div>
+      <p class="mt-1 text-[12px] leading-relaxed text-slate-400">{{ body }}</p>
     </a>
   {% endfor %}
 </section>
+
 {% endblock %}
