@@ -656,6 +656,26 @@ def _register_routes(app: FastAPI) -> None:
             requested=backend, actual=actual_backend,
             llm_available=_llm_available(),
         )
+        # When ALL observations errored AND we have hints, surface the hint
+        # in the synthesized answer text — otherwise users just see the raw
+        # error like "Not enough baskets to compute co-purchases" with no
+        # explanation.  The per-observation amber callout still renders, but
+        # we want the answer card to lead with the friendly explanation.
+        observations = body.get("observations", [])
+        all_errored = bool(observations) and all(
+            isinstance(o.get("result"), dict) and "error" in o["result"]
+            for o in observations
+        )
+        if all_errored:
+            hinted = [o for o in observations if o.get("hint")]
+            if hinted:
+                lead = "\n\n".join(
+                    f"**{o['tool']}** — {o['hint']}" for o in hinted
+                )
+                body["answer"] = (
+                    f"I tried to answer *{question}*, but the dataset doesn't "
+                    f"support it as-is:\n\n{lead}"
+                )
         # Per-question observability so users can see cost/quality per ask.
         n_obs    = len(body.get("observations", []))
         n_errors = sum(
