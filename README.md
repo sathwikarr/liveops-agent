@@ -1,77 +1,79 @@
 # LiveOps Agent
 
 [![tests](https://github.com/sathwikarr/liveops-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/sathwikarr/liveops-agent/actions/workflows/tests.yml)
-[![deploy](https://github.com/sathwikarr/liveops-agent/actions/workflows/deploy.yml/badge.svg)](https://github.com/sathwikarr/liveops-agent/actions/workflows/deploy.yml)
 [![python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](pyproject.toml)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![live](https://img.shields.io/badge/live-liveops--agent.onrender.com-10b981)](https://liveops-agent.onrender.com)
 
-> **An AI co-pilot for retail/ecommerce ops.** Watches your live order stream, catches
-> anomalies the dashboard would miss, asks an LLM *why*, picks a mitigating action with
-> a Thompson-sampling bandit, and routes severity-gated alerts to Slack + email — and
-> ships with a 9-stage **Analyst Workbench** that turns a CSV into RFM segments,
-> elasticity curves, churn predictions, and a recommendation calendar in two clicks.
+> **An AI co-pilot for retail ops.** Upload a CSV of orders, ask the agent in plain
+> English, watch it pick from 10 analytic tools, and get the answer + plan + an
+> observation trace. Backed by a 55-case eval harness with an honest dual-baseline.
+
+**🔗 Live demo: [liveops-agent.onrender.com](https://liveops-agent.onrender.com)** *(~20 sec cold start on Render free tier)*
 
 ---
 
-## ✨ Try it in 30 seconds
+## What's interesting about this
+
+Most portfolio AI projects flex a single eval number. This one pins **three**, and the gap between them is the story:
+
+| Corpus | Backend | Pass rate | What it tells you |
+|---|---|---:|---|
+| **Main** (55 cases) | heuristic | **100.0%** | Regression-catcher. Same regex, same questions — moves only if something breaks. |
+| **Holdout** (14 cases) | heuristic | **7.1%** | Paraphrases the heuristic was never tuned on. Falls off a cliff. |
+| **Holdout** (14 cases) | Gemini | **28.6%** | Same paraphrases through an LLM. ~4× the heuristic — meaningful generalization, with room to grow on prompt tuning. |
+
+The **7.1%** is the most honest number. It's the cliff that tells you whether the agent generalizes or just memorizes. Both holdout numbers are pinned in `tests/fixtures/`, regression-checked in CI, and surfaced on the live `/evals` page.
+
+---
+
+## Try it in 30 seconds
 
 ```bash
 git clone https://github.com/sathwikarr/liveops-agent.git
 cd liveops-agent
-docker build -t liveops-agent .
-docker run --rm -p 8000:8000 liveops-agent
-# → open http://localhost:8000 — landing page, then /demo, /workbench, /evals (no signup needed)
+pip install -r requirements.txt
+uvicorn web.server:app --reload
+# → http://127.0.0.1:8000
 ```
 
-The **Demo** page auto-loads a bundled retail dataset (3,878 orders × 30 SKUs ×
-200 customers) and walks you through every stage of the analyst pipeline with
-interactive Plotly charts. No API keys, no data setup, no friction.
+The bundled retail dataset (3,878 orders, 200 customers, 30 SKUs, 18 months) is loaded automatically. No signup required — `/demo`, `/workbench`, and `/evals` all work anonymously.
+
+To exercise the full multi-user surface (saved datasets, question history, encrypted Slack/SMTP connectors), sign up at `/signup`.
 
 ---
 
-## What's in the box
+## What you can do on the live site
 
-The repo ships **two** complementary products that share auth, DB, and notifications:
+| Page | What's there |
+|---|---|
+| **`/`** | Honest dual-baseline ribbon (100% / 7.1% / 28.6%) right on the landing |
+| **`/demo`** | KPI tiles + 3 server-rendered charts (revenue line, top products bar, churn donut) over the bundled dataset |
+| **`/workbench`** | Drop a CSV → ask plain-English questions → see plan + tools + answer + 6 charts inline. Loading skeletons, observability badges, copy-as-Markdown |
+| **`/evals`** | Pass-rate timeline, per-tool breakdown, per-case failure log, Run-evals button |
+| **`/dashboard`** *(auth)* | Active dataset KPIs + charts, saved-datasets list, recent + pinned questions, connector status |
+| **`/history`** *(auth)* | Chronological feed of every upload + question, click-to-expand to see past answers |
+| **`/settings`** *(auth)* | Slack webhook + SMTP credentials, Fernet-encrypted at rest, "Send test ping" |
 
-### 🔴 Ops vertical — real-time anomaly response
+---
 
-| Layer            | What it does                                                                          |
-|------------------|---------------------------------------------------------------------------------------|
-| Detection        | Per-(region, product) z-score + IsolationForest on revenue, orders, inventory         |
-| Explanation      | Gemini 2.5 Flash → structured JSON (cause, severity, action, bullets)                 |
-| Decision         | Thompson-sampling bandit picks the next action; learns from logged outcomes           |
-| Notifications    | Unified Slack + SMTP, severity-gated, deduped on a sliding cooldown                   |
-| Memory           | SQLite (WAL) — `users`, `anomalies`, `actions`                                        |
-| Forecasting      | Prophet per-segment + adaptive resample + walk-forward CV (MAPE / SMAPE / RMSE)       |
-| Auth             | bcrypt signup + login, scoped per-user data                                           |
-| Runners          | FastAPI website (`web.server:app`) + standalone CLI loop (`auto_agent.py`)            |
+## The 10 analytic tools
 
-### 🟣 Analyst Workbench — exploratory data product (9 stages)
+The agent picks from these. Each is independently tested, eval-graded, and chartable:
 
-| Stage | Page section            | Capability                                                                |
-|-------|-------------------------|---------------------------------------------------------------------------|
-| 1     | Ingest                  | Schema-agnostic upload (CSV/XLSX/JSON/Parquet), auto role-mapping         |
-| 2     | EDA                     | Distributions, correlations, seasonality detection                        |
-| 3     | Clean                   | Suggested fixes (dedupe, imputation, type coercion) with audit log        |
-| 4     | Analyze                 | RFM, cohorts, market basket (Apriori), price elasticity                   |
-| 5     | Predict                 | Churn (logistic), stockout risk, demand forecast                          |
-| 6     | Recommend               | Insight-driven action ranking with confidence + ROI estimates             |
-| 7     | NL Query + What-if      | Ask the data anything; what-if simulator; 1-click narrative report        |
-| 8     | Calendar + Compare      | Action calendar (Plotly Gantt), multi-dataset join, competitor benchmark  |
-| 🤖    | Agent (tool-using)      | LLM **or** offline heuristic agent that picks tools and explains its plan |
-| 📌    | Pinboard                | Pin any chart, persist as JSON, export a standalone HTML report           |
+| Tool | What it returns |
+|---|---|
+| `revenue_by_period` | Daily / weekly / monthly revenue trend |
+| `top_products` / `top_customers` | Pareto rankings by total revenue |
+| `segment_customers` | RFM bucket counts (Champions, Loyal, At-Risk, Lost…) |
+| `product_quadrants` | BCG quadrant counts (Star, Cash Cow, Question Mark, Dog) |
+| `co_purchases` | Frequent product pairs by lift |
+| `price_elasticity` | Per-SKU log-log regression slope |
+| `churn_risk` | Distribution of Active / Cooling / At-Risk / Churned |
+| `cohort_retention` | Signup-cohort retention matrix |
+| `describe_columns` | Schema + dtypes (fallback for unrecognised questions) |
 
-### 🔌 Live data connectors
-
-Beyond file upload, the workbench can pull from:
-
-- **Postgres / Redshift / any SQLAlchemy URL** — raw SQL or `SELECT * FROM table LIMIT N`
-- **Google Sheets** — service-account auth or public CSV-export fallback
-- **S3 / R2 / MinIO** — CSV / Parquet / JSON, format auto-detected from extension
-- **Local files** — same picker, just unified
-
-Saved connections live in a **SQLite-backed store with Fernet-encrypted secrets**
-(`ANALYST_CONN_KEY` env var, or a 0600-perm file under `~/`).
+The tool registry lives in `analyst/agent.py`. Each tool is a `ToolSpec` with name, description, params, and a callable.
 
 ---
 
@@ -79,129 +81,95 @@ Saved connections live in a **SQLite-backed store with Fernet-encrypted secrets*
 
 ```mermaid
 flowchart LR
-    subgraph Sources["Data sources"]
-        S1[CSV / XLSX / JSON]
-        S2[Postgres]
-        S3[Google Sheets]
-        S4[S3 / R2 / MinIO]
+    subgraph In["Input"]
+        U[User CSV upload]
+        B[Bundled retail dataset]
+    end
+    subgraph Plan["Planner"]
+        H[Heuristic regex]
+        L[Gemini]
+    end
+    subgraph Exec["Executor"]
+        T[10 tool registry]
+    end
+    subgraph Out["Surfaces"]
+        WB[/workbench]
+        DSH[/dashboard]
+        HIST[/history]
+    end
+    subgraph Store["Storage"]
+        DB[(SQLite WAL)]
+        UF[user_data/<br/>per-user uploads]
+    end
+    subgraph Eval["Eval harness"]
+        M[Main corpus<br/>55 cases]
+        HO[Holdout<br/>14 paraphrases]
     end
 
-    subgraph Ingest["analyst/ingest"]
-        IN[Loader + role-mapper]
-    end
-
-    subgraph Stages["analyst stages 2-8"]
-        E[EDA]
-        C[Clean]
-        A[Analyze<br/>RFM · Basket · Elasticity]
-        P[Predict<br/>Churn · Stockout · Demand]
-        R[Recommend]
-        K[Calendar + Compare]
-    end
-
-    subgraph Agent["agent loop"]
-        DET[detect.py<br/>z-score + IForest]
-        EXP[explain.py<br/>Gemini 2.5 Flash]
-        BAN[bandit.py<br/>Thompson sampling]
-        NOT[notify.py<br/>Slack + SMTP]
-    end
-
-    subgraph LLM["LLM agent"]
-        TR[Tool registry<br/>10 tools]
-        PL[Planner<br/>LLM or heuristic]
-        EX[Executor]
-    end
-
-    subgraph Storage["Storage"]
-        DB[(SQLite<br/>users · anomalies · actions)]
-        CS[(connections.db<br/>Fernet-encrypted)]
-    end
-
-    subgraph UI["Streamlit UI"]
-        APP[app.py — login]
-        DASH[Ops dashboard]
-        WB[Analyst workbench]
-        DEMO[Demo route]
-        PIN[Pinboard]
-    end
-
-    S1 & S2 & S3 & S4 --> IN --> E --> C --> A --> P --> R --> K
-    K --> PIN
-    DET --> EXP --> BAN --> NOT --> DB
-    A & P & R --> TR --> PL --> EX
-    APP --> DASH & WB & DEMO
-    DB <--> DASH
-    CS <--> WB
-    WB --> PIN
+    U & B --> Plan --> T --> Out
+    H & L -.fallback.-> T
+    Out --> DB
+    U --> UF
+    M & HO --> Plan
 ```
 
 ---
 
-## Layout
+## Stack
+
+- **Backend** — FastAPI + Starlette sessions + bcrypt + Fernet
+- **Data** — pandas, scikit-learn, Prophet (per-segment forecasting), networkx (basket lift)
+- **LLM** — Gemini 2.5 Flash via the `google-genai` SDK, with a deterministic regex-routing fallback
+- **Frontend** — Jinja2 + Tailwind CDN + Alpine.js + Chart.js
+- **Storage** — SQLite (WAL), schema in `agent/db.py`
+- **Auth** — bcrypt, signed-cookie sessions, per-IP sliding-window rate limit on signup + login
+- **Tests** — 325 pytest cases, run on 3.11 + 3.12 in CI
+- **Deploy** — Docker + GitHub Actions + Render free tier
+
+---
+
+## What makes this different from other portfolio AI projects
+
+1. **Honest about generalization.** Most demos show one number. This one shows the cliff between memorized and novel input — and explains why the LLM number is 28.6%, not 80%, with the next iteration named explicitly.
+2. **The eval harness is the product.** Not an afterthought. Pass rates, per-tool scoreboards, regression checks, and a 14-case holdout are all surfaced in the UI, persisted to SQLite, and charted as a timeline.
+3. **Multi-user from the start.** Encrypted connector storage, isolated uploads, isolated history, isolated questions — every test asserts the isolation explicitly.
+4. **Real production plumbing.** Auth, rate limiting, mobile-responsive layout, loading skeletons, accessibility (`aria-busy`, `aria-controls`, focus-visible), CI on every PR.
+
+---
+
+## Project layout
 
 ```
-agent/                       # Real-time ops loop
+agent/                       # SQLite + auth + secrets
   auth.py        bcrypt signup + login
+  db.py          users · anomalies · actions · datasets · questions · connectors · eval_runs
+  secret.py      Fernet encrypt/decrypt with LIVEOPS_FERNET_KEY
   bandit.py      Thompson-sampling action picker
-  db.py          SQLite layer (init, users, anomalies, actions)
   detect.py      per-segment z-score + IsolationForest
-  explain.py     Gemini structured-output wrapper (deterministic fallback)
-  forecast.py    Prophet per-segment forecasts + backtests
-  notify.py      Slack + SMTP unified notifier with severity routing
-  action.py      simulate_action — bandit pick + Gemini severity + notify + log
+  explain.py     Gemini wrapper (deterministic-fallback)
+  forecast.py    Prophet per-segment + walk-forward CV
+  notify.py      Slack + SMTP unified notifier
 
-analyst/                     # Analyst workbench
-  ingest.py      schema-agnostic loader + dataset classifier
-  eda.py         distributions, correlations, seasonality
-  clean.py       cleaning suggestions + audit log
+analyst/                     # Analytic surface
+  agent.py       Tool registry, heuristic planner, LLM planner, executor, ask()
+  evals/         55-case main corpus + 14-case holdout + scorer + runner
   analysis.py    RFM, cohorts, market basket, elasticity
   predict.py     churn, stockout, demand
-  recommend.py   insight-driven action ranking
-  charts.py      8 Plotly chart builders (used by workbench + demo + pinboard)
-  pinboard.py    pin specs, persistence, standalone HTML export
-  agent.py       LLM tool-using loop with heuristic fallback
-  connectors/    postgres / gsheets / s3 / file + Fernet-encrypted store
+  charts.py      8 chart builders
+  sample_data/   bundled retail_orders.csv
 
-pages/
-  dashboard.py            Ops dashboard (anomalies, actions, forecasts)
-  analyst_workbench.py    9-stage analyst UI
-  demo.py                 auto-loaded sample-data walkthrough
-  run_agent.py            canonical pipeline runner — used by dashboard + CLI
+web/                         # FastAPI app
+  server.py      Routes, /api/* endpoints, dataset/profile/chart helpers
+  templates/     landing, demo, workbench, evals, dashboard, history,
+                 run_agent, settings, login (Jinja2 + Alpine)
+  static/site.css Premium-vein motion polish
 
-app.py                     login / signup entry page
-auto_agent.py              standalone CLI: poll → detect → explain → act → alert
-
-tests/                     226 pytest tests
-.github/workflows/         tests.yml (3.11 + 3.12) · deploy.yml (GHCR + Fly)
-Dockerfile                 multi-stage build, non-root runtime, healthcheck
-fly.toml                   one-click Fly.io deployment config
-```
-
----
-
-## Quick start (no Docker)
-
-```bash
-git clone https://github.com/sathwikarr/liveops-agent.git
-cd liveops-agent
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env             # fill in GEMINI_API_KEY (optional)
-uvicorn web.server:app --reload  # → http://127.0.0.1:8000
-```
-
-Open the landing page, then jump to whichever surface fits — no signup required for the public ones:
-
-- **/demo** — bundled retail dataset, KPIs + first 8 rows, recomputed each load.
-- **/workbench** — ask the agent in plain English; watch it pick tools and run them.
-- **/evals** — fire the 55-case eval harness, baseline-pinned and regression-checked.
-- **/dashboard** + **/run-agent** — auth-gated ops vertical (sign up at /signup).
-
-To run the headless ops loop:
-
-```bash
-python auto_agent.py --user smoketest --interval 60 --threshold 2.0
-python auto_agent.py --user smoketest --once          # one-shot
+tests/                       # 325 pytest cases
+  test_web.py            60 web tests
+  test_analyst_agent.py  41 agent tests (incl. why-string regression)
+  test_analyst_evals.py  17 eval harness tests
+  …                      auth, DB, forecast, notify, charts, pinboard
+  fixtures/              pinned baselines (3 JSON files)
 ```
 
 ---
@@ -210,80 +178,74 @@ python auto_agent.py --user smoketest --once          # one-shot
 
 See `.env.example` for the full list. Most are optional — the app degrades gracefully.
 
-| Variable                    | Purpose                                                            |
-|-----------------------------|--------------------------------------------------------------------|
-| `GEMINI_API_KEY`            | LLM explanations + LLM agent backend (heuristic backend works without it) |
-| `GEMINI_MODEL`              | Defaults to `gemini-2.5-flash`                                     |
-| `SLACK_WEBHOOK`             | Optional — leave blank to disable Slack                            |
-| `SMTP_HOST`, `SMTP_USER`, … | Optional — leave `SMTP_HOST` blank to disable email                |
-| `ALERT_SLACK_MIN_SEVERITY`  | `low` / `medium` / `high` / `critical`                             |
-| `ALERT_EMAIL_MIN_SEVERITY`  | `low` / `medium` / `high` / `critical`                             |
-| `ANALYST_CONN_KEY`          | Fernet key for the saved-connection store (auto-generated if absent) |
+| Variable | Purpose |
+|---|---|
+| `GEMINI_API_KEY` | LLM backend; without it, heuristic still works (degrades on holdout) |
+| `GEMINI_MODEL` | Defaults to `gemini-2.5-flash` |
+| `SESSION_SECRET` | Signs the session cookie. Generate with `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
+| `LIVEOPS_FERNET_KEY` | Encrypts saved Slack webhooks + SMTP creds. Generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
+| `LIVEOPS_DB` | SQLite path. Defaults to `data/liveops.sqlite3` |
+| `LIVEOPS_UPLOAD_DIR` | Per-user upload directory. Defaults to `user_data/workbench_uploads/` |
+| `LIVEOPS_LLM_DEBUG` | Set to `1` to log LLM-fallback reasons to stderr (network errors, parse failures, etc.) |
 
 ---
 
 ## Tests
 
-**268 pytest tests** cover auth, DB, dedupe, detect (z-score + IForest), forecast,
-bandit, notify, every analyst stage, the LLM agent loop, connectors, charts, the
-pinboard, the 55-case eval harness, and the FastAPI routes (signup→login→dashboard,
-JSON APIs, anonymous redirects). CI runs on Python 3.11 + 3.12 — see `.github/workflows/tests.yml`.
+325 pytest cases cover auth, DB, every analytic tool, the LLM agent loop, the heuristic planner's friendly-prose contract (regex literals are explicitly forbidden in plan `why` strings), the 55-case eval harness, the held-out 14-case corpus, the FastAPI routes (signup → login → dashboard → upload → ask → history → settings), per-user isolation across datasets / questions / connectors, encryption-at-rest verification, rate-limiter behavior, and frontend HTML scaffolding.
 
 ```bash
 pip install pytest
 SLACK_WEBHOOK="" SMTP_HOST="" GEMINI_API_KEY="" pytest -v
 ```
 
+CI runs on every PR — see `.github/workflows/tests.yml`.
+
 ---
 
 ## Deployment
 
-### Docker (local)
+### Docker
 
 ```bash
-docker build -t liveops-agent .                       # multi-stage, non-root
+docker build -t liveops-agent .
 docker run --rm -p 8000:8000 \
   --env-file .env \
   -v "$PWD/data:/app/data" \
+  -v "$PWD/user_data:/app/user_data" \
   liveops-agent
 ```
 
-### Fly.io (production-grade, one-shot)
+### Render (current live deploy)
 
-```bash
-fly launch --no-deploy --copy-config
-fly volume create liveops_data --region iad --size 1
-fly secrets set \
-  GEMINI_API_KEY=... \
-  ANALYST_CONN_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
-fly deploy
-```
+1. Connect the GitHub repo on render.com → New Web Service.
+2. Build command: `pip install -r requirements.txt`
+3. Start command: `uvicorn web.server:app --host 0.0.0.0 --port $PORT`
+4. Set `GEMINI_API_KEY`, `SESSION_SECRET`, `LIVEOPS_FERNET_KEY` in the Environment tab.
 
-### GitHub Actions (CI/CD)
-
-`tests.yml` runs the full pytest matrix on every PR. `deploy.yml` builds + pushes
-the image to **GitHub Container Registry** on every `v*.*.*` tag, then deploys to
-Fly if `FLY_API_TOKEN` is configured.
-
-```bash
-git tag v0.1.0 && git push --tags          # triggers build + deploy
-```
-
-### macOS launchd (background loop)
-
-`deploy/com.liveops.agent.plist` runs the headless `auto_agent.py` loop on
-boot; start the dashboard separately when you want to look at it.
+The app auto-deploys on every push to `main`.
 
 ---
 
 ## Security
 
-`/.env` and `streamlit/secrets.toml` are git-ignored. Connector secrets are
-**Fernet-encrypted at rest** in `connections.db`; rotating `ANALYST_CONN_KEY`
-blanks out only the encrypted fields and leaves plaintext config intact, so
-users only have to re-enter passwords.
+Sensitive data handling:
 
-If a secret leaks into git history, see `SECURITY.md` for the rotation playbook.
+- **Passwords** — bcrypt-hashed, never stored plaintext.
+- **Sessions** — signed with `SESSION_SECRET` (Starlette's `SessionMiddleware`).
+- **Connector secrets** (Slack webhooks, SMTP credentials) — Fernet-encrypted at rest, derivation key from `LIVEOPS_FERNET_KEY`. The encryption is verified by tests: stored blob never contains the plaintext substring.
+- **Per-user isolation** — datasets, questions, and connectors are all keyed by username and tested for cross-user access (404 on read, 401 on mutate).
+- **Rate limiting** — 5 attempts / 60s sliding window per IP on `/login` and `/signup`.
+- `.env` is git-ignored. See `SECURITY.md` for the secret-rotation playbook.
+
+---
+
+## Roadmap (what I'd build next)
+
+1. **Tighten the LLM routing prompt.** The 28.6% holdout pass rate is the single biggest lever — most failures are the LLM returning the right tool name in prose but not in the JSON shape the parser wants. ~30 minutes of prompt iteration could push this past 60%.
+2. **Token + per-tool latency in `obs_meta`.** Currently `obs_meta` reports wall-clock latency and tool count; surfacing token cost (LLM) and per-tool timing would close the per-question observability story.
+3. **Self-serve password reset.** Today the login page has an honest "Forgot password?" stub — proper email-driven reset needs a one-shot token table and SMTP-from-server.
+4. **Bandit feedback loop.** Capturing thumbs-up/down on each agent answer to learn which tool selections lead to satisfying responses.
 
 ---
 
