@@ -58,20 +58,58 @@ def _t_revenue_by_period(df, role_map, *, freq: str = "W"):
     return A.revenue_trend(df, role_map=role_map, freq=freq).to_dict("records")
 
 
+def _resolve_display_name(df, id_col: str, candidate_name_cols: tuple) -> Dict[str, str]:
+    """Build {id_value: display_name} from the first available name column.
+    If no name column exists, returns an empty dict so callers fall back to
+    the id verbatim. Names with multiple values per id collapse to the most
+    common one (defensive against typos / data drift)."""
+    for c in candidate_name_cols:
+        if c in df.columns:
+            try:
+                return (df[[id_col, c]].dropna()
+                          .groupby(id_col)[c]
+                          .agg(lambda s: s.value_counts().index[0])
+                          .to_dict())
+            except Exception:
+                continue
+    return {}
+
+
 def _t_top_products(df, role_map, *, n: int = 10):
     if "product" not in role_map or "amount" not in role_map:
         return {"error": "Need product + amount roles"}
-    g = (df.groupby(role_map["product"])[role_map["amount"]]
+    pid = role_map["product"]
+    # Prefer a human-readable name column when one exists in the dataset.
+    name_for = _resolve_display_name(
+        df, pid, ("product_name", "product_title", "name", "title", "sku_name"))
+    g = (df.groupby(pid)[role_map["amount"]]
            .sum().sort_values(ascending=False).head(int(n)))
-    return [{"product": p, "revenue": float(v)} for p, v in g.items()]
+    return [
+        {
+            "product":    name_for.get(p, p),   # display name when available
+            "product_id": p,                     # always include the id for joins
+            "revenue":    float(v),
+        }
+        for p, v in g.items()
+    ]
 
 
 def _t_top_customers(df, role_map, *, n: int = 10):
     if "customer" not in role_map or "amount" not in role_map:
         return {"error": "Need customer + amount roles"}
-    g = (df.groupby(role_map["customer"])[role_map["amount"]]
+    cid = role_map["customer"]
+    name_for = _resolve_display_name(
+        df, cid, ("customer_name", "name", "full_name", "display_name"))
+    g = (df.groupby(cid)[role_map["amount"]]
            .sum().sort_values(ascending=False).head(int(n)))
-    return [{"customer": c, "revenue": float(v)} for c, v in g.items()]
+    return [
+        {
+            "customer":    name_for.get(c, c),
+            "customer_id": c,
+            "revenue":     float(v),
+        }
+        for c, v in g.items()
+    ]
 
 
 def _t_segment_customers(df, role_map):
