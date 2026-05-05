@@ -221,6 +221,40 @@ def test_heuristic_why_is_user_prose(retail_df, role_map, question, expect_in_wh
             f"expected {needle!r} in any step's why for {question!r}, got {whys!r}"
 
 
+def test_market_basket_no_pairs_returns_empty_not_crash():
+    """Regression: when every basket has a single product, market_basket
+    used to crash on `sort_values(['lift', 'support'])` because rows was
+    empty and the resulting DataFrame had no columns.  Must return an
+    empty DataFrame with the expected schema instead — under both the
+    'too few baskets' early-out and the 'no pairs' branch."""
+    import pandas as pd
+    from analyst.analysis import market_basket
+
+    role_map = {"customer": "customer_id", "product": "product_id",
+                "date": "order_date", "amount": "amount"}
+    expected_cols = ["item_a", "item_b", "support",
+                      "confidence", "lift", "n_baskets"]
+
+    # 8 single-item baskets — clears the n_baskets >= 5 floor, hits the
+    # no-pairs branch because each basket has a unique product.
+    df = pd.DataFrame({
+        "order_id":    [f"O{i}" for i in range(8)],
+        "customer_id": [f"C{i}" for i in range(8)],
+        "product_id":  [f"P{i}" for i in range(8)],
+        "order_date":  pd.to_datetime(["2025-01-01"] * 8),
+        "amount":      [10.0] * 8,
+    })
+    out = market_basket(df, role_map=role_map, basket_key="order_id")
+    assert out.empty
+    assert list(out.columns) == expected_cols
+
+    # Also exercise the early-out (n_baskets < 5).
+    df_small = df.head(3)
+    out2 = market_basket(df_small, role_map=role_map, basket_key="order_id")
+    assert out2.empty
+    assert list(out2.columns) == expected_cols
+
+
 def test_heuristic_garbage_query_helpful_fallback():
     """Garbage queries route to describe_columns with a helpful 'try
     rephrasing' message, not the old terse 'fallback' string."""

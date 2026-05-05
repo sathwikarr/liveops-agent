@@ -1335,6 +1335,13 @@ def _observation_hint(tool: str, result: Any,
     # tells the user WHICH column to add to their CSV.
     if isinstance(result, dict) and "error" in result:
         msg = str(result["error"])
+        # Specific tool errors that aren't about missing roles get bespoke
+        # hints — generic "tool returned an error" is unhelpful.
+        if tool == "co_purchases" and "Not enough baskets" in msg:
+            return ("Every order in your dataset contains a single product, "
+                    "so there are no co-purchase pairs to score. This tool "
+                    "needs orders with 2+ items each (rows sharing the same "
+                    "`order_id` or the same `(customer, date)` pair).")
         # Detect role-requirement patterns from analyst tool guards:
         #   "Need customer + date + amount", "RFM needs customer + date + amount",
         #   "Need product + amount roles", "Not enough baskets ...".

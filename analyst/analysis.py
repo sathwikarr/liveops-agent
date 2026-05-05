@@ -141,16 +141,25 @@ def cohort_retention(df: pd.DataFrame, role_map: dict) -> pd.DataFrame:
 # Market basket — simple co-purchase counts + lift
 # --------------------------------------------------------------------------- #
 
+_MARKET_BASKET_COLS = ["item_a", "item_b", "support",
+                         "confidence", "lift", "n_baskets"]
+
+
 def market_basket(df: pd.DataFrame, role_map: dict, top_n: int = 20,
                   basket_key: Optional[str] = None) -> pd.DataFrame:
     """Co-purchase pairs sorted by lift.
 
     A "basket" is rows sharing the same `basket_key` (or, if missing,
     same customer+date). Returns: item_a, item_b, support, confidence, lift.
+
+    Always returns a DataFrame with the expected columns even when empty,
+    so callers can `.empty`-check without crashing on a column-less frame.
     """
+    empty = pd.DataFrame(columns=_MARKET_BASKET_COLS)
+
     missing = _need(role_map, "product")
     if missing:
-        return pd.DataFrame()
+        return empty
     product = role_map["product"]
 
     if basket_key and basket_key in df.columns:
@@ -160,13 +169,13 @@ def market_basket(df: pd.DataFrame, role_map: dict, top_n: int = 20,
         df = df.copy()
         df[bk] = df[role_map["customer"]].astype(str) + "|" + df[role_map["date"]].astype(str)
     else:
-        return pd.DataFrame()
+        return empty
 
     sub = df[[bk, product]].dropna().drop_duplicates()
     baskets = sub.groupby(bk)[product].apply(set)
     n_baskets = len(baskets)
     if n_baskets < 5:
-        return pd.DataFrame()
+        return empty
 
     item_counts: dict[str, int] = {}
     pair_counts: dict[tuple[str, str], int] = {}
@@ -187,6 +196,9 @@ def market_basket(df: pd.DataFrame, role_map: dict, top_n: int = 20,
         rows.append({"item_a": a, "item_b": b, "support": round(sup, 4),
                      "confidence": round(conf, 4), "lift": round(lift, 3),
                      "n_baskets": c})
+    if not rows:
+        # Every basket had a single product — no pairs to lift-score.
+        return empty
     out = pd.DataFrame(rows).sort_values(["lift", "support"], ascending=False).head(top_n)
     return out.reset_index(drop=True)
 
